@@ -1,0 +1,626 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Supabase-inspired light theme with Apple blue */
+    --background: 0 0% 100%;
+    --foreground: 210 11% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
+
+    /* Apple Blue instead of Supabase Green */
+    --primary: 213 94% 68%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 210 11% 15%;
+
+    --muted: 210 40% 98%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 98%;
+    --accent-foreground: 210 11% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 94% 68%;
+
+    --radius: 0.5rem;
+
+    /* Supabase brand colors */
+    --brand-50: 142 76% 97%;
+    --brand-100: 142 76% 94%;
+    --brand-200: 142 84% 87%;
+    --brand-300: 142 77% 73%;
+    --brand-400: 142 69% 58%;
+    --brand-500: 142 71% 45%;
+    --brand-600: 142 76% 36%;
+    --brand-700: 142 74% 29%;
+    --brand-800: 142 70% 24%;
+    --brand-900: 142 75% 20%;
+
+    /* Light sidebar colors */
+    --sidebar-bg: 0 0% 100%;
+    --sidebar-foreground: 210 11% 15%;
+    --sidebar-muted: 210 40% 98%;
+    --sidebar-accent: 213 94% 68%;
+    --sidebar-accent-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    /* Dark theme with tempo.new-inspired grays and apple.com whites */
+    --background: 220 14% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 14% 11%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 14% 11%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Apple Blue for dark theme */
+    --primary: 213 94% 68%;
+    --primary-foreground: 220 14% 8%;
+
+    --secondary: 220 14% 14%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 14% 14%;
+    --muted-foreground: 220 10% 80%;
+
+    --accent: 220 14% 14%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 14% 16%;
+    --input: 220 14% 14%;
+    --ring: 213 94% 68%;
+
+    /* Dark brand colors */
+    --brand-50: 142 75% 20%;
+    --brand-100: 142 70% 24%;
+    --brand-200: 142 74% 29%;
+    --brand-300: 142 76% 36%;
+    --brand-400: 142 71% 45%;
+    --brand-500: 142 69% 58%;
+    --brand-600: 142 77% 73%;
+    --brand-700: 142 84% 87%;
+    --brand-800: 142 76% 94%;
+    --brand-900: 142 76% 97%;
+
+    /* Dark sidebar colors */
+    --sidebar-bg: 220 14% 11%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-muted: 220 14% 16%;
+    --sidebar-accent: 213 94% 68%;
+    --sidebar-accent-foreground: 220 14% 8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Dark mode scrollbar */
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(217 32% 10%);
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(215 20% 30%);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(215 20% 40%);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+  }
+
+  .dark * {
+    scrollbar-color: hsl(215 20% 30%) hsl(217 32% 10%);
+  }
+}
+
+@layer components {
+  .sidebar-fixed {
+    @apply fixed left-0 top-0 z-40 h-screen transform transition-all duration-300 ease-in-out;
+    @apply w-64 lg:w-64;
+  }
+
+  .sidebar-collapsed {
+    @apply w-16;
+  }
+
+  .main-content {
+    @apply transition-all duration-300 ease-in-out min-h-screen;
+  }
+
+  .main-content-expanded {
+    @apply lg:ml-64;
+  }
+
+  .main-content-collapsed {
+    @apply lg:ml-16;
+  }
+
+  /* Supabase-style card */
+  .supabase-card {
+    @apply bg-card border border-border/50 rounded-lg shadow-sm;
+    @apply hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Supabase-style table */
+  .supabase-table {
+    @apply border-collapse border-spacing-0;
+  }
+
+  .supabase-table th {
+    @apply bg-muted/50 border-b border-border/50 px-4 py-3 text-left text-sm font-medium text-muted-foreground;
+  }
+
+  .supabase-table td {
+    @apply border-b border-border/30 px-4 py-3 text-sm;
+  }
+
+  .supabase-table tr:hover {
+    @apply bg-muted/30;
+  }
+
+  /* Dark mode hover improvements */
+  .dark .supabase-table tr:hover {
+    @apply bg-muted/20;
+  }
+
+  /* Responsive table container */
+  .table-container {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile table responsiveness */
+  @media (max-width: 768px) {
+    .supabase-table th,
+    .supabase-table td {
+      @apply px-3 py-2;
+      font-size: 0.875rem;
+    }
+
+    /* Ensure horizontal scroll on mobile */
+    .overflow-x-auto {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted-foreground) / 0.3);
+      border-radius: 3px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground) / 0.5);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .supabase-table th,
+    .supabase-table td {
+      @apply px-2 py-2;
+      font-size: 0.8125rem;
+    }
+  }
+
+  /* iPhone 13 specific optimizations (390px width) */
+  @media (max-width: 390px) {
+    .supabase-table th,
+    .supabase-table td {
+      @apply px-2 py-1;
+      font-size: 0.75rem;
+    }
+
+    /* Ensure minimum column widths are respected */
+    .supabase-table th[class*="min-w-"],
+    .supabase-table td[class*="min-w-"] {
+      min-width: var(--min-width, auto);
+    }
+  }
+
+  /* Mobile responsive utilities */
+  @media (max-width: 1024px) {
+    .sidebar-fixed {
+      transform: translateX(-100%);
+    }
+
+    .sidebar-fixed.translate-x-0 {
+      transform: translateX(0);
+      @apply shadow-xl;
+    }
+
+    .main-content {
+      margin-left: 0;
+      padding-bottom: 6rem;
+      margin-bottom: 6rem;
+    }
+
+    .header-fixed {
+      left: 0;
+    }
+  }
+
+  /* Mobile-first responsive design matching login proportions */
+  @media (max-width: 768px) {
+    /* Reduce padding and margins to match login screen proportions */
+    .mobile-optimized {
+      @apply px-3 py-2;
+    }
+
+    .mobile-card-spacing {
+      @apply p-3 mb-3;
+    }
+
+    .mobile-grid-compact {
+      @apply grid-cols-1 gap-3;
+    }
+
+    .mobile-text-compact {
+      @apply text-sm leading-tight;
+    }
+
+    .mobile-button-compact {
+      @apply px-3 py-2 text-sm;
+    }
+
+    /* Stats cards mobile optimization */
+    .stats-card-mobile {
+      @apply p-3;
+    }
+
+    .stats-card-mobile .text-2xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    .stats-card-mobile .text-xs {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    /* Table mobile optimization */
+    .mobile-table-container {
+      @apply overflow-x-auto;
+      scrollbar-width: thin;
+    }
+
+    .mobile-table-cell {
+      @apply px-2 py-2 text-xs;
+    }
+
+    /* Form mobile optimization */
+    .mobile-form-spacing {
+      @apply space-y-3;
+    }
+
+    .mobile-form-grid {
+      @apply grid-cols-1 gap-3;
+    }
+
+    /* Dashboard mobile optimization */
+    .dashboard-mobile-header {
+      @apply px-3 py-3 mb-4;
+    }
+
+    .dashboard-mobile-content {
+      @apply px-3 pb-20;
+    }
+
+    /* Profile page mobile optimization */
+    .profile-mobile-layout {
+      @apply grid-cols-1 gap-4;
+    }
+
+    .profile-mobile-card {
+      @apply p-4;
+    }
+
+    /* Settings mobile optimization */
+    .settings-mobile-grid {
+      @apply grid-cols-1 gap-4;
+    }
+
+    .settings-mobile-item {
+      @apply p-3;
+    }
+  }
+
+  /* Extra small screens (iPhone SE, etc.) */
+  @media (max-width: 375px) {
+    .mobile-optimized {
+      padding-left: 0.5rem; /* px-2 */
+      padding-right: 0.5rem;
+      padding-top: 0.25rem; /* py-1 */
+      padding-bottom: 0.25rem;
+    }
+
+    .mobile-card-spacing {
+      padding: 0.5rem; /* p-2 */
+      margin-bottom: 0.5rem; /* mb-2 */
+    }
+
+    .mobile-text-compact {
+      font-size: 0.75rem; /* text-xs */
+      line-height: 1.25; /* leading-tight */
+    }
+
+    .stats-card-mobile .text-xl {
+      font-size: 1.125rem; /* text-lg */
+      line-height: 1.75rem;
+    }
+
+    .mobile-table-cell {
+      padding-left: 0.25rem; /* px-1 */
+      padding-right: 0.25rem;
+      padding-top: 0.25rem; /* py-1 */
+      padding-bottom: 0.25rem;
+      font-size: 0.75rem; /* text-xs */
+    }
+  }
+
+  /* Bottom navigation styles */
+  .mobile-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50;
+    @apply backdrop-blur-md bg-opacity-95;
+    height: 5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-bottom-nav {
+      @apply hidden;
+    }
+  }
+
+  /* Force spacing for mobile bottom nav */
+  @media (max-width: 1023px) {
+    body {
+      padding-bottom: 5rem;
+    }
+
+    .min-h-screen {
+      min-height: calc(100vh - 5rem);
+    }
+  }
+
+  /* FlowBuilder responsive styles */
+  .flow-node {
+    @apply transition-all duration-200;
+  }
+
+  .flow-controls-mobile {
+    @apply !bottom-4 !left-4 !top-auto !right-auto !flex !flex-row;
+  }
+
+  .flow-minimap-mobile {
+    @apply !bottom-4 !right-4 !top-auto;
+  }
+
+  .flow-properties-panel {
+    @apply fixed right-4 top-1/2 transform -translate-y-1/2 z-10 w-80 transition-all duration-300;
+  }
+
+  @media (max-width: 768px) {
+    .flow-properties-panel {
+      @apply fixed inset-0 flex items-center justify-center z-50 w-full max-w-full top-0 transform-none bg-black/50;
+    }
+
+    .flow-properties-panel .supabase-card {
+      @apply w-[90%] max-w-md mx-auto max-h-[90vh] overflow-y-auto;
+    }
+  }
+
+  /* Connection canvas styles */
+  .connection-canvas .react-flow__node {
+    @apply max-w-full;
+  }
+
+  .connection-canvas .react-flow__pane {
+    @apply bg-white dark:bg-gray-900;
+  }
+
+  @media (max-width: 640px) {
+    .connection-canvas .react-flow__node {
+      @apply w-[280px] !important;
+    }
+  }
+
+  /* Connection target highlight */
+  .connection-target {
+    @apply ring-2 ring-primary/50 ring-offset-1 transition-all duration-200;
+  }
+
+  /* Active flow edge animations */
+  .active-flow-edge {
+    animation: flowPulse 2s ease-in-out infinite;
+    stroke-width: 2px !important;
+    stroke: #6b7280 !important;
+  }
+
+  .flow-edge {
+    stroke-width: 2px !important;
+    stroke: #6b7280 !important;
+  }
+
+  .dark .flow-edge {
+    stroke: #9ca3af !important;
+  }
+
+  /* Make sure edges are always visible with higher z-index */
+  .react-flow__edge {
+    z-index: 10 !important;
+    opacity: 1 !important;
+  }
+
+  .react-flow__edge-path {
+    stroke-width: 2px !important;
+  }
+
+  @keyframes flowPulse {
+    0%,
+    100% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 1;
+      filter: drop-shadow(0 0 4px currentColor);
+    }
+  }
+
+  /* Enhanced edge styles */
+  .react-flow__edge path {
+    @apply stroke-gray-500 dark:stroke-gray-400;
+    transition: all 0.3s ease;
+    stroke-width: 2px;
+  }
+
+  .react-flow__edge.selected path,
+  .react-flow__edge:hover path {
+    @apply stroke-gray-600 dark:stroke-gray-300;
+    filter: drop-shadow(0 0 6px currentColor);
+    stroke-width: 3px;
+  }
+
+  .react-flow__edge-path {
+    @apply stroke-2;
+  }
+
+  /* Make sure edges are always visible */
+  .react-flow__edge {
+    opacity: 1 !important;
+  }
+
+  .connection-canvas .react-flow__edge {
+    z-index: 10;
+  }
+
+  /* Flow node enhancements */
+  .flow-node {
+    @apply transition-all duration-200;
+  }
+
+  .flow-node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Connection target highlight */
+  .connection-target {
+    @apply ring-2 ring-gray-500/50 ring-offset-2;
+    animation: connectionPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes connectionPulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+  }
+
+  /* Enhanced responsive utilities */
+  .responsive-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    .responsive-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Card responsive improvements */
+  .responsive-card {
+    @apply w-full;
+  }
+
+  @media (max-width: 768px) {
+    .responsive-card {
+      @apply mx-0;
+    }
+  }
+
+  /* Form responsive improvements */
+  .responsive-form {
+    @apply space-y-4;
+  }
+
+  @media (max-width: 640px) {
+    .responsive-form .grid {
+      @apply grid-cols-1 !important;
+    }
+  }
+
+  /* Dialog responsive improvements */
+  @media (max-width: 640px) {
+    .dialog-content {
+      @apply w-[95vw] max-w-none mx-2;
+    }
+  }
+
+  /* Improved mobile spacing */
+  @media (max-width: 768px) {
+    .mobile-spacing {
+      @apply px-4 py-2;
+    }
+
+    .mobile-text {
+      @apply text-sm;
+    }
+  }
+}
