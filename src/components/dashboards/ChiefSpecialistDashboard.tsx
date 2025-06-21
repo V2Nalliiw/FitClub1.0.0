@@ -64,6 +64,7 @@ import {
   Menu,
   LogOut,
   Plus,
+  PlusCircle,
   Edit,
   Search,
   Filter,
@@ -149,8 +150,11 @@ const ChiefSpecialistDashboard = () => {
   );
   const [newTip, setNewTip] = useState({
     title: "",
-    content: "",
     category: "",
+    description: "",
+    image_url: "",
+    duration_minutes: 0,
+    steps: [{ description: "", duration: 0 }], // Começa com um passo vazio
   });
   const [isCreateTipModalOpen, setIsCreateTipModalOpen] = useState(false);
 
@@ -232,21 +236,49 @@ const ChiefSpecialistDashboard = () => {
   const canManageClinic = true;
   const isChiefSpecialist = user?.role === "chief_specialist";
 
-  const menuItems = [
+  const baseMenuItems = [
     { icon: UserCheck, label: "Dashboard", view: "dashboard" as const },
     { icon: Users, label: "Meus Pacientes", view: "patients" as const },
     { icon: Calendar, label: "Agenda", view: "schedule" as const },
     { icon: MessageSquare, label: "Dicas Diárias", view: "tips" as const },
     { icon: FileText, label: "Biblioteca", view: "library" as const },
-    {
-      icon: Shield,
-      label: "Administração",
-      view: "administration" as const,
-    },
   ];
+
+  const menuItems = isChiefSpecialist
+    ? [
+        ...baseMenuItems,
+        {
+          icon: Shield,
+          label: "Administração",
+          view: "administration" as const,
+        },
+      ]
+    : baseMenuItems;
 
   console.log("Chief Specialist Dashboard - canManageClinic:", canManageClinic);
   console.log("User role:", useAuth().user?.role);
+
+  const handleStepChange = (index, field, value) => {
+    const updatedSteps = [...newTip.steps];
+    const numericValue =
+      field === "duration" ? parseInt(value, 10) || 0 : value;
+    updatedSteps[index][field] = numericValue;
+    setNewTip({ ...newTip, steps: updatedSteps });
+  };
+
+  const addStep = () => {
+    setNewTip({
+      ...newTip,
+      steps: [...newTip.steps, { description: "", duration: 0 }],
+    });
+  };
+
+  const removeStep = (index) => {
+    if (newTip.steps.length > 1) {
+      const updatedSteps = newTip.steps.filter((_, i) => i !== index);
+      setNewTip({ ...newTip, steps: updatedSteps });
+    }
+  };
 
   // Fetch real data from Supabase
   const fetchDashboardData = async () => {
@@ -432,13 +464,22 @@ const ChiefSpecialistDashboard = () => {
           return sum + (fa.progress?.tips_sent || 0);
         }, 0) || 0;
 
-      // Mock some data that would require more complex queries
-      const weeklyAppointments = Math.floor(totalPatients * 0.3);
-      const monthlyRevenue = totalPatients * 150; // Estimate based on patients
-      const clinicAppointments = totalSpecialists * 15; // Estimate
-      const patientEngagement = Math.min(
-        89,
-        Math.floor((activePatients / Math.max(totalPatients, 1)) * 100),
+      // Filter appointments for the last week for the "weeklyAppointments" stat
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const weeklyAppointments =
+        appointments?.filter(
+          (apt) => new Date(apt.appointment_date) >= oneWeekAgo,
+        ).length || 0;
+
+      const monthlyRevenue = totalPatients * 150; // This is still an estimate
+      
+      // Get the total number of appointments for the clinic
+      const clinicAppointments = appointments?.length || 0;
+
+      // Calculate the real patient engagement rate
+      const patientEngagement = Math.floor(
+        (activePatients / Math.max(totalPatients, 1)) * 100,
       );
 
       // Format real appointments (only future ones for the list)
@@ -462,7 +503,7 @@ const ChiefSpecialistDashboard = () => {
         stats: {
           totalPatients,
           activePatients,
-          weeklyAppointments: futureAppointments.length,
+          weeklyAppointments,
           monthlyRevenue,
           totalSpecialists,
           clinicAppointments,
@@ -1144,7 +1185,7 @@ const ChiefSpecialistDashboard = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              FlowBuilder - Especialista Chefe
+              FlowBuilder
             </h1>
             <p className="text-muted-foreground">
               Crie fluxos interativos para seus pacientes
@@ -1300,7 +1341,9 @@ const ChiefSpecialistDashboard = () => {
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">
-              Dashboard do Especialista-Chefe
+              {isChiefSpecialist
+                ? "Dashboard do Especialista-Chefe"
+                : "Dashboard do Especialista"}
             </h1>
             <p className="text-muted-foreground">
               Gerencie sua prática clínica e supervisione a equipe
@@ -1994,7 +2037,7 @@ const ChiefSpecialistDashboard = () => {
                   </div>
 
                   {/* Tips Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Card className="supabase-card">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
@@ -2022,20 +2065,6 @@ const ChiefSpecialistDashboard = () => {
                         </div>
                         <p className="text-xs text-muted-foreground">
                           este mês
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="supabase-card">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Engajamento
-                        </CardTitle>
-                        <Star className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">87%</div>
-                        <p className="text-xs text-muted-foreground">
-                          taxa de leitura
                         </p>
                       </CardContent>
                     </Card>
@@ -2070,8 +2099,11 @@ const ChiefSpecialistDashboard = () => {
                                     setEditingTip(tip);
                                     setNewTip({
                                       title: tip.title,
-                                      content: tip.content,
                                       category: tip.category,
+                                      description: tip.description || "",
+                                      image_url: tip.image_url || "",
+                                      duration_minutes: tip.duration_minutes || 0,
+                                      steps: tip.steps || [{ description: "", duration: 0 }],
                                     });
                                     setIsEditTipModalOpen(true);
                                   }}
@@ -2210,7 +2242,7 @@ const ChiefSpecialistDashboard = () => {
                         </CardHeader>
                         <CardContent>
                           <p className="text-sm text-muted-foreground mb-4">
-                            {tip.content}
+                            {tip.description}
                           </p>
                           <div className="flex justify-between items-center text-xs text-muted-foreground">
                             <span>Enviado para {tip.sentTo} pacientes</span>
@@ -2857,121 +2889,193 @@ const ChiefSpecialistDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Create Tip Modal */}
-      <Dialog
+            {/* Create Tip Modal */}
+            <Dialog
         open={isCreateTipModalOpen}
         onOpenChange={setIsCreateTipModalOpen}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nova Dica</DialogTitle>
+            <DialogTitle>Nova Dica Detalhada</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Crie uma dica completa com imagem, descrição e passos.
+            </p>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 py-2 max-h-[70vh] overflow-y-auto pr-4">
+            {/* Image Selection */}
             <div className="space-y-2">
-              <Label htmlFor="tip-title">Título</Label>
-              <Input
-                id="tip-title"
-                placeholder="Título da dica"
-                value={newTip.title}
-                onChange={(e) =>
-                  setNewTip({ ...newTip, title: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tip-category">Categoria</Label>
-              <Select
-                value={newTip.category}
-                onValueChange={(value) =>
-                  setNewTip({ ...newTip, category: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ansiedade">Ansiedade</SelectItem>
-                  <SelectItem value="Bem-estar">Bem-estar</SelectItem>
-                  <SelectItem value="Exercícios">Exercícios</SelectItem>
-                  <SelectItem value="Mindfulness">Mindfulness</SelectItem>
-                  <SelectItem value="Sono">Sono</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tip-content">Conteúdo</Label>
-              <Textarea
-                id="tip-content"
-                placeholder="Escreva o conteúdo da dica..."
-                value={newTip.content}
-                onChange={(e) =>
-                  setNewTip({ ...newTip, content: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateTipModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    if (!newTip.title || !newTip.content || !newTip.category) {
-                      alert(
-                        "Por favor, preencha todos os campos obrigatórios.",
-                      );
-                      return;
-                    }
-
-                    const { error } = await supabase.from("tips").insert({
-                      title: newTip.title,
-                      content: newTip.content,
-                      category: newTip.category,
-                      created_by: user?.id,
-                      clinic_id: user?.clinicId,
-                    });
-
-                    if (error) {
-                      console.error("Error creating tip:", error);
-                      alert("Erro ao criar dica. Tente novamente.");
-                      return;
-                    }
-
-                    alert("Dica criada com sucesso!");
-                    setNewTip({ title: "", content: "", category: "" });
-                    setIsCreateTipModalOpen(false);
-                    fetchDashboardData(); // Refresh data
-                  } catch (error) {
-                    console.error("Error creating tip:", error);
-                    alert("Erro ao criar dica. Tente novamente.");
+              <Label>Imagem da Dica</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="tip-image-url"
+                  placeholder="URL da imagem..."
+                  value={newTip.image_url}
+                  onChange={(e) =>
+                    setNewTip({ ...newTip, image_url: e.target.value })
                   }
-                }}
-              >
-                Criar Dica
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+                  className="flex-grow"
+                />
+                {/* Você pode integrar sua ImageGallery aqui no futuro */}
+                <Button variant="outline">Escolher</Button>
+              </div>
+              {newTip.image_url && (
+                <div className="mt-2 border rounded-md p-2 bg-muted">
+                  <img
+                    src={newTip.image_url}
+                    alt="Prévia"
+                    className="w-full h-40 object-cover rounded-md"
+                  />
+                </div>
+              )}
+            </div>
 
-      {/* Add Patient Modal */}
-      <Dialog
-        open={isAddPatientModalOpen}
-        onOpenChange={setIsAddPatientModalOpen}
-      >
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Paciente</DialogTitle>
-          </DialogHeader>
-          <AddPatientForm
-            onClose={() => setIsAddPatientModalOpen(false)}
-            clinicId={user?.clinicId}
-            specialists={dashboardData.specialists}
-          />
+            {/* Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tip-title">Título</Label>
+                <Input
+                  id="tip-title"
+                  placeholder="Ex: Exercícios Matinais"
+                  value={newTip.title}
+                  onChange={(e) =>
+                    setNewTip({ ...newTip, title: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tip-category">Categoria</Label>
+                <Select
+                  value={newTip.category}
+                  onValueChange={(value) =>
+                    setNewTip({ ...newTip, category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ansiedade">Ansiedade</SelectItem>
+                    <SelectItem value="Bem-estar">Bem-estar</SelectItem>
+                    <SelectItem value="Exercícios">Exercícios</SelectItem>
+                    <SelectItem value="Mindfulness">Mindfulness</SelectItem>
+                    <SelectItem value="Sono">Sono</SelectItem>
+                    <SelectItem value="Nutrição">Nutrição</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tip-description">Descrição</Label>
+              <Textarea
+                id="tip-description"
+                placeholder="Uma breve descrição sobre a dica..."
+                value={newTip.description}
+                onChange={(e) =>
+                  setNewTip({ ...newTip, description: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="tip-duration">Duração Total (minutos)</Label>
+                <Input
+                  id="tip-duration"
+                  type="number"
+                  placeholder="Ex: 10"
+                  value={newTip.duration_minutes}
+                  onChange={(e) =>
+                    setNewTip({ ...newTip, duration_minutes: parseInt(e.target.value, 10) || 0 })
+                  }
+                />
+              </div>
+
+            {/* Steps Section */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Passos para Completar</Label>
+              {newTip.steps.map((step, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                   <span className="text-sm font-bold text-primary">{index + 1}</span>
+                  <div className="flex-grow grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder={`Descrição do passo ${index + 1}`}
+                      value={step.description}
+                      onChange={(e) => handleStepChange(index, "description", e.target.value)}
+                      className="col-span-2"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="min"
+                      value={step.duration}
+                      onChange={(e) => handleStepChange(index, "duration", e.target.value)}
+                    />
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => removeStep(index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addStep} className="mt-2">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Adicionar Passo
+              </Button>
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateTipModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  if (!newTip.title || !newTip.category || !newTip.description) {
+                    alert("Por favor, preencha Título, Categoria e Descrição.");
+                    return;
+                  }
+
+                  const newTipData: any = {
+                    title: newTip.title,
+                    category: newTip.category,
+                    description: newTip.description,
+                    image_url: newTip.image_url,
+                    duration_minutes: newTip.duration_minutes,
+                    steps: newTip.steps,
+                    created_by: user?.id,
+                    clinic_id: user?.clinicId,
+                  };
+
+                  const { error } = await supabase.from("tips").insert(newTipData);
+
+                  if (error) {
+                    console.error("Error creating tip:", error);
+                    alert(`Erro ao criar dica: ${error.message}`);
+                    return;
+                  }
+
+                  alert("Dica criada com sucesso!");
+                  setNewTip({ // Resetar para o novo estado inicial
+                    title: "",
+                    category: "",
+                    description: "",
+                    image_url: "",
+                    duration_minutes: 0,
+                    steps: [{ description: "", duration: 0 }],
+                  });
+                  setIsCreateTipModalOpen(false);
+                  fetchDashboardData(); // Atualizar dados
+                } catch (error) {
+                  console.error("Error creating tip:", error);
+                  alert("Ocorreu um erro ao criar a dica. Tente novamente.");
+                }
+              }}
+            >
+              Criar Dica
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -3316,106 +3420,194 @@ const ChiefSpecialistDashboard = () => {
 
       {/* Edit Tip Modal */}
       <Dialog open={isEditTipModalOpen} onOpenChange={setIsEditTipModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Dica</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 py-2 max-h-[70vh] overflow-y-auto pr-4">
+            {/* Image Selection */}
             <div className="space-y-2">
-              <Label htmlFor="edit-tip-title">Título</Label>
-              <Input
-                id="edit-tip-title"
-                placeholder="Título da dica"
-                value={newTip.title}
-                onChange={(e) =>
-                  setNewTip({ ...newTip, title: e.target.value })
-                }
-              />
+              <Label>Imagem da Dica</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="edit-tip-image-url"
+                  placeholder="URL da imagem..."
+                  value={newTip.image_url}
+                  onChange={(e) =>
+                    setNewTip({ ...newTip, image_url: e.target.value })
+                  }
+                  className="flex-grow"
+                />
+                <Button variant="outline">Escolher</Button>
+              </div>
+              {newTip.image_url && (
+                <div className="mt-2 border rounded-md p-2 bg-muted">
+                  <img
+                    src={newTip.image_url}
+                    alt="Prévia"
+                    className="w-full h-40 object-cover rounded-md"
+                  />
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-tip-category">Categoria</Label>
-              <Select
-                value={newTip.category}
-                onValueChange={(value) =>
-                  setNewTip({ ...newTip, category: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ansiedade">Ansiedade</SelectItem>
-                  <SelectItem value="Bem-estar">Bem-estar</SelectItem>
-                  <SelectItem value="Exercícios">Exercícios</SelectItem>
-                  <SelectItem value="Mindfulness">Mindfulness</SelectItem>
-                  <SelectItem value="Sono">Sono</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-tip-title">Título</Label>
+                <Input
+                  id="edit-tip-title"
+                  placeholder="Ex: Exercícios Matinais"
+                  value={newTip.title}
+                  onChange={(e) =>
+                    setNewTip({ ...newTip, title: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-tip-category">Categoria</Label>
+                <Select
+                  value={newTip.category}
+                  onValueChange={(value) =>
+                    setNewTip({ ...newTip, category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ansiedade">Ansiedade</SelectItem>
+                    <SelectItem value="Bem-estar">Bem-estar</SelectItem>
+                    <SelectItem value="Exercícios">Exercícios</SelectItem>
+                    <SelectItem value="Mindfulness">Mindfulness</SelectItem>
+                    <SelectItem value="Sono">Sono</SelectItem>
+                    <SelectItem value="Nutrição">Nutrição</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="edit-tip-content">Conteúdo</Label>
+              <Label htmlFor="edit-tip-description">Descrição</Label>
               <Textarea
-                id="edit-tip-content"
-                placeholder="Escreva o conteúdo da dica..."
-                value={newTip.content}
+                id="edit-tip-description"
+                placeholder="Uma breve descrição sobre a dica..."
+                value={newTip.description}
                 onChange={(e) =>
-                  setNewTip({ ...newTip, content: e.target.value })
+                  setNewTip({ ...newTip, description: e.target.value })
                 }
-                rows={4}
+                rows={3}
               />
             </div>
-            <DialogFooter>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-tip-duration">Duração Total (minutos)</Label>
+              <Input
+                id="edit-tip-duration"
+                type="number"
+                placeholder="Ex: 10"
+                value={newTip.duration_minutes}
+                onChange={(e) =>
+                  setNewTip({
+                    ...newTip,
+                    duration_minutes: parseInt(e.target.value, 10) || 0,
+                  })
+                }
+              />
+            </div>
+
+            {/* Steps Section */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Passos para Completar</Label>
+              {newTip.steps.map((step, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-2 border rounded-md bg-muted/50"
+                >
+                  <span className="text-sm font-bold text-primary">
+                    {index + 1}
+                  </span>
+                  <div className="flex-grow grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder={`Descrição do passo ${index + 1}`}
+                      value={step.description}
+                      onChange={(e) =>
+                        handleStepChange(index, "description", e.target.value)
+                      }
+                      className="col-span-2"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="min"
+                      value={step.duration}
+                      onChange={(e) =>
+                        handleStepChange(index, "duration", e.target.value)
+                      }
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeStep(index)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsEditTipModalOpen(false);
-                  setEditingTip(null);
-                  setNewTip({ title: "", content: "", category: "" });
-                }}
+                size="sm"
+                onClick={addStep}
+                className="mt-2"
               >
-                Cancelar
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Adicionar Passo
               </Button>
-              <Button
-                onClick={async () => {
-                  try {
-                    if (!newTip.title || !newTip.content || !newTip.category) {
-                      alert(
-                        "Por favor, preencha todos os campos obrigatórios.",
-                      );
-                      return;
-                    }
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditTipModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  if (!editingTip) return;
 
-                    const { error } = await supabase
-                      .from("tips")
-                      .update({
-                        title: newTip.title,
-                        content: newTip.content,
-                        category: newTip.category,
-                        updated_at: new Date().toISOString(),
-                      })
-                      .eq("id", editingTip.id);
+                  const { error } = await supabase
+                    .from("tips")
+                    .update({
+                      title: newTip.title,
+                      category: newTip.category,
+                      description: newTip.description,
+                      image_url: newTip.image_url,
+                      duration_minutes: newTip.duration_minutes,
+                      steps: newTip.steps,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", editingTip.id);
 
-                    if (error) {
-                      console.error("Error updating tip:", error);
-                      alert("Erro ao atualizar dica. Tente novamente.");
-                      return;
-                    }
-
-                    alert("Dica atualizada com sucesso!");
-                    setNewTip({ title: "", content: "", category: "" });
-                    setIsEditTipModalOpen(false);
-                    setEditingTip(null);
-                    fetchDashboardData();
-                  } catch (error) {
+                  if (error) {
                     console.error("Error updating tip:", error);
                     alert("Erro ao atualizar dica. Tente novamente.");
+                    return;
                   }
-                }}
-              >
-                Salvar Alterações
-              </Button>
-            </DialogFooter>
-          </div>
+
+                  alert("Dica atualizada com sucesso!");
+                  setIsEditTipModalOpen(false);
+                  fetchDashboardData();
+                } catch (error) {
+                  console.error("Error updating tip:", error);
+                  alert("Erro ao atualizar dica. Tente novamente.");
+                }
+              }}
+            >
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -4095,16 +4287,18 @@ const ChiefSpecialistDashboard = () => {
       </div>
 
       {/* Floating Clinic Admin Button */}
-      <div className="fixed bottom-20 right-4 lg:bottom-4 z-50">
-        <Button
-          onClick={() => setShowClinicAdmin(true)}
-          className="bg-primary hover:bg-primary/90 shadow-lg"
-          size="lg"
-        >
-          <Building2 className="h-5 w-5 mr-2" />
-          Administração da Clínica
-        </Button>
-      </div>
+      {isChiefSpecialist && (
+        <div className="fixed bottom-20 right-4 lg:bottom-4 z-50">
+          <Button
+            onClick={() => setShowClinicAdmin(true)}
+            className="bg-primary hover:bg-primary/90 shadow-lg"
+            size="lg"
+          >
+            <Building2 className="h-5 w-5 mr-2" />
+            Administração da Clínica
+          </Button>
+        </div>
+      )}
 
       {/* Floating FlowBuilder Button */}
       <div className="fixed bottom-36 right-4 lg:bottom-20 z-50">

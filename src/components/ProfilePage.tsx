@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+npm rum devimport React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -88,11 +88,22 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     }
   };
 
-  const onSubmit = (data: ProfileFormData) => {
-    // In a real app, this would update the user profile
-    console.log("Profile update:", data);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+  const onSubmit = async (data: ProfileFormData) => {
+    if (user?.id) {
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({ name: data.name })
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("Erro ao atualizar o nome do perfil:", error);
+      } else {
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+        // Opcional: atualizar contexto do usuário ou recarregar a página
+        // window.location.reload();
+      }
+    }
   };
 
   const getRoleDisplayName = (role: string) => {

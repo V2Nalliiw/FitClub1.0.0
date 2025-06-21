@@ -1,0 +1,2 @@
+ALTER TABLE public.tip_assignments
+ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP WITH TIME ZONE; 

@@ -37,6 +37,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/auth/ThemeToggle";
+import AppLogo from "@/components/auth/AppLogo";
+import ClinicLogo from "@/components/auth/ClinicLogo";
+import {
+  Select,
+  SelectContent,
+} from "@/components/ui/select";
 
 const PatientDashboard = () => {
   const { user, logout } = useAuth();
@@ -47,6 +53,7 @@ const PatientDashboard = () => {
   const [selectedTip, setSelectedTip] = useState<any>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Mock data for demonstration
   const [healthTipsState, setHealthTipsState] = useState([
@@ -226,6 +233,13 @@ const PatientDashboard = () => {
       completed: true,
       dueDate: "Ontem",
     },
+  ];
+
+  const menuItems = [
+    { id: 1, title: "Início" },
+    { id: 2, title: "Plano de Cuidados" },
+    { id: 3, title: "Conquistas" },
+    { id: 4, title: "Recursos" },
   ];
 
   const renderHomeTab = () => (
@@ -1181,8 +1195,10 @@ const PatientDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Heart className="h-8 w-8 text-red-500" />
-              <span className="text-xl font-bold">HealthCare</span>
+              <ClinicLogo />
+              <span className="font-semibold text-lg hidden sm:block">
+                FitClub
+              </span>
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />

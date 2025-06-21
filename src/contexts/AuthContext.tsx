@@ -10,9 +10,9 @@ import {
   AuthState,
   LoginCredentials,
   User,
+  Clinic,
   ROLE_PERMISSIONS,
 } from "@/types/auth";
-import { AuthService } from "@/services/authService";
 import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,143 +26,100 @@ export function AuthProvider({
 }: AuthProviderProps): React.ReactElement {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
+    clinic: null,
     isAuthenticated: false,
     isLoading: true,
   });
 
-  useEffect(() => {
-    // Check for existing session on mount
-    const checkSession = async () => {
-      try {
-        setAuthState((prev) => ({ ...prev, isLoading: true }));
-        const user = await AuthService.getCurrentUser();
-        setAuthState({
-          user,
-          isAuthenticated: !!user,
-          isLoading: false,
-        });
-      } catch (error) {
-        // Handle AuthSessionMissingError gracefully - this is expected on first load
-        if (
-          error instanceof Error &&
-          error.message.includes("Auth session missing")
-        ) {
-          console.log("No existing session found - user needs to login");
-        } else {
-          console.error("Error checking session:", error);
-        }
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
+  const fetchUserAndClinicData = async (sessionUser: any) => {
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", sessionUser.id)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error("No user profile found for session user:", sessionUser.id, profileError);
+        return { user: null, clinic: null };
       }
-    };
 
-    // Small delay to ensure DOM is ready before checking session
-    const timer = setTimeout(() => {
-      checkSession();
-    }, 100);
-
-    checkSession();
-    clearTimeout(timer);
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change:", event, session?.user?.id);
-
-      if (event === "SIGNED_IN" && session?.user) {
-        setAuthState((prev) => ({ ...prev, isLoading: true }));
-        try {
-          const user = await AuthService.getCurrentUser();
-          console.log("User profile loaded:", user);
-          setAuthState({
-            user,
-            isAuthenticated: !!user,
-            isLoading: false,
-          });
-        } catch (error) {
-          console.error("Error loading user profile:", error);
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+      let clinicData: Clinic | null = null;
+      if (userProfile.clinic_id) {
+        const { data, error: clinicError } = await supabase
+          .from("clinics")
+          .select("*")
+          .eq("id", userProfile.clinic_id)
+          .single();
+        if (clinicError) {
+          console.error("Error fetching clinic data:", clinicError);
+        } else {
+          clinicData = data;
         }
-      } else if (event === "SIGNED_OUT") {
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-        // Redirect to login when signed out
-        if (
-          window.location.pathname !== "/" &&
-          window.location.pathname !== "/login"
-        ) {
-          window.location.href = "/login";
-        }
-      } else if (event === "USER_UPDATED") {
-        // Refresh user data when updated
-        const user = await AuthService.getCurrentUser();
+      }
+
+      const user: User = {
+        id: userProfile.id,
+        email: sessionUser.email,
+        name: userProfile.name,
+        role: userProfile.role,
+        clinicId: userProfile.clinic_id,
+        clinicLogoUrl: clinicData?.logo_mobile_url || null,
+        avatar: userProfile.avatar_url,
+        createdAt: sessionUser.created_at,
+      };
+      return { user, clinic: clinicData };
+    } catch (error) {
+      console.error("Error fetching user and clinic data:", error);
+      return { user: null, clinic: null };
+    }
+  };
+
+  // Checagem inicial da sessão ao montar o contexto
+  React.useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const { user, clinic } = await fetchUserAndClinicData(session.user);
         setAuthState({
           user,
+          clinic,
           isAuthenticated: !!user,
+          isLoading: false,
+        });
+      } else {
+        setAuthState({
+          user: null,
+          clinic: null,
+          isAuthenticated: false,
           isLoading: false,
         });
       }
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
-    try {
-      setAuthState((prev) => ({ ...prev, isLoading: true }));
+    const { data, error } = await supabase.auth.signInWithPassword(credentials);
+    if (error || !data.user) return false;
 
-      const user = await AuthService.login(credentials);
+    // Buscar perfil e atualizar o contexto imediatamente
+    const { user, clinic } = await fetchUserAndClinicData(data.user);
+    setAuthState({
+      user,
+      clinic,
+      isAuthenticated: !!user,
+      isLoading: false,
+    });
 
-      if (user) {
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
-      throw error;
-    }
+    return true;
   };
 
   const logout = async () => {
-    try {
-      await AuthService.logout();
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-
-      // Force redirect to login page after logout
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Error during logout:", error);
-      // Even if logout fails, redirect to login
-      window.location.href = "/login";
-    }
+    await supabase.auth.signOut();
+    window.location.href = '/login';
   };
 
   const hasPermission = (permission: string): boolean => {
     if (!authState.user) return false;
-
     const userPermissions = ROLE_PERMISSIONS[authState.user.role] || [];
     return userPermissions.includes(permission);
   };
@@ -174,11 +131,17 @@ export function AuthProvider({
     hasPermission,
   };
 
+  if (authState.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Export the useAuth hook as a separate named function export
-// This format ensures compatibility with React's Fast Refresh
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -11,12 +11,21 @@ export interface User {
   name: string;
   role: UserRole;
   clinicId?: string; // For clinic_admin, specialist, and patient
+  clinicLogoUrl?: string | null;
   avatar?: string;
   createdAt: string;
 }
 
+export interface Clinic {
+  id: string;
+  name: string;
+  logo_url?: string;
+  [key: string]: any; // Allow other properties
+}
+
 export interface AuthState {
   user: User | null;
+  clinic: Clinic | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }

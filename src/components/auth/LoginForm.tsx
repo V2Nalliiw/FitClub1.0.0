@@ -53,13 +53,15 @@ const LoginForm = ({ onRegisterClick }: LoginFormProps = {}) => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      // Ensure email and password are not undefined
       const credentials = {
         email: data.email,
         password: data.password,
       };
-      await login(credentials);
-      // Navigation will be handled by the App component based on user role
+      const success = await login(credentials);
+      if (!success) {
+        setError("Email ou senha inválidos, ou usuário não encontrado.");
+      }
+      // Se sucesso, AppRoutes faz a navegação automaticamente
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao fazer login");
     }

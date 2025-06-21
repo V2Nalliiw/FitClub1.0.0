@@ -191,7 +191,7 @@ export class LogoService {
 
       // Temporary hardcoded URL for login logo
       const hardcodedLogoUrl =
-        "https://qqvwsyvnvlfnbmrzyjkg.supabase.co/storage/v1/object/public/app-images//default-logo.png";
+        "https://qqvwsyvnvlfnbmrzyjkg.supabase.co/storage/v1/object/public/app-images//1750493324278-4qwig6wzt4.png";
 
       console.log("🔗 Using hardcoded logo URL:", hardcodedLogoUrl);
       return hardcodedLogoUrl;

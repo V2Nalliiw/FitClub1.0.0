@@ -91,6 +91,7 @@ export default defineConfig({
     },
   },
   server: {
+    appType: 'spa',
     // @ts-ignore
     allowedHosts: true,
     hmr: {

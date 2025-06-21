@@ -54,6 +54,8 @@ interface AppLogo {
 
 const profileSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  email: z.string().email("E-mail inválido"),
+  role: z.enum(["specialist", "chief_specialist", "clinic_admin"]),
   avatar: z.string().optional(),
 });
 
@@ -64,11 +66,11 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
 }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isTabLoading, setIsTabLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("profile");
 
-  // Check URL for tab parameter
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
@@ -76,6 +78,12 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
       setActiveTab(tabParam);
     }
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'system' && user?.role === 'super_admin') {
+      loadGlobalAppSettings();
+    }
+  }, [activeTab, user]);
 
   // Profile states
   const [previewImage, setPreviewImage] = useState<string | null>(
@@ -111,6 +119,8 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || "",
+      email: user?.email || "",
+      role: (user?.role as ProfileFormData["role"]) || "specialist",
       avatar: user?.avatar || "",
     },
   });
@@ -127,7 +137,7 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
 
   const loadGlobalAppSettings = async () => {
     try {
-      setIsLoading(true);
+      setIsTabLoading(true);
       setError(null);
 
       const { data, error } = await supabase
@@ -172,7 +182,7 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
       console.error("Error fetching global app settings:", err);
       setError("Erro ao carregar configurações globais do app");
     } finally {
-      setIsLoading(false);
+      setIsTabLoading(false);
     }
   };
 
@@ -273,10 +283,32 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
     }));
   };
 
-  const onSubmitProfile = (data: ProfileFormData) => {
-    console.log("Profile update:", data);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+  const onSubmitProfile = async (data: ProfileFormData) => {
+    if (user?.id) {
+      let errorMsg = "";
+      // Atualiza o e-mail no auth do Supabase
+      if (data.email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: data.email });
+        if (emailError) {
+          errorMsg += `Erro ao atualizar e-mail: ${emailError.message}\n`;
+        }
+      }
+      // Atualiza o perfil no banco
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({ name: data.name, role: data.role, email: data.email })
+        .eq("id", user.id);
+      if (error) {
+        errorMsg += `Erro ao atualizar perfil: ${error.message}`;
+      }
+      if (errorMsg) {
+        setError(errorMsg);
+      } else {
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+        window.location.reload();
+      }
+    }
   };
 
   const handleSaveGlobalSettings = async () => {
@@ -323,14 +355,20 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
   };
 
   const getRoleDisplayName = (role: string) => {
-    const roleMap = {
-      super_admin: "Super Administrador",
-      clinic_admin: "Administrador da Clínica",
-      chief_specialist: "Especialista-Chefe",
-      specialist: "Especialista",
-      patient: "Paciente",
-    };
-    return roleMap[role as keyof typeof roleMap] || role;
+    switch (role) {
+      case "super_admin":
+        return "Super Administrador";
+      case "clinic_admin":
+        return "Administrador da Clínica";
+      case "chief_specialist":
+        return "Especialista-Chefe";
+      case "specialist":
+        return "Especialista";
+      case "patient":
+        return "Paciente";
+      default:
+        return "Usuário";
+    }
   };
 
   const renderLogoUploadSection = (
@@ -533,44 +571,52 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
                           <FormItem>
                             <FormLabel>Nome Completo</FormLabel>
                             <FormControl>
-                              <Input
-                                placeholder="Digite seu nome completo"
-                                {...field}
-                              />
+                              <Input placeholder="Digite seu nome completo" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-
-                      <div className="space-y-2">
-                        <Label>E-mail</Label>
-                        <Input
-                          value={user?.email || ""}
-                          disabled
-                          className="bg-muted cursor-not-allowed"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          O e-mail não pode ser alterado
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Cargo/Função</Label>
-                        <Input
-                          value={getRoleDisplayName(user?.role || "")}
-                          disabled
-                          className="bg-muted cursor-not-allowed"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Seu cargo é definido pelo administrador
-                        </p>
-                      </div>
-
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>E-mail</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Digite seu e-mail" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cargo/Função</FormLabel>
+                            <FormControl>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione o cargo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="specialist">Especialista</SelectItem>
+                                  <SelectItem value="chief_specialist">Especialista-Chefe</SelectItem>
+                                  <SelectItem value="clinic_admin">Administrador da Clínica</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="flex justify-end pt-4">
                         <Button
                           type="submit"
                           className="bg-primary hover:bg-primary/90"
+                          disabled={isLoading}
                         >
                           <Save className="h-4 w-4 mr-2" />
                           Salvar Alterações
@@ -650,101 +696,83 @@ const UnifiedSettingsPage: React.FC<UnifiedSettingsPageProps> = ({
           {/* System Tab (Super Admin Only) */}
           {user?.role === "super_admin" && (
             <TabsContent value="system" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Logos do Aplicativo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {renderLogoUploadSection(
-                      "main",
-                      "Logo Principal (Web)",
-                      "PNG, JPG ou SVG (máx. 2MB)",
-                    )}
-                    {renderLogoUploadSection(
-                      "mobile",
-                      "Logo Mobile",
-                      "Versão reduzida ou ícone (máx. 2MB)",
-                    )}
-                  </div>
+              {isTabLoading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Identidade Visual</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {renderLogoUploadSection("main", "Logo Principal", "Ideal: 150x60px")}
+                        {renderLogoUploadSection("mobile", "Logo Mobile", "Ideal: 50x50px")}
+                        {renderLogoUploadSection("pwa", "Logo para PWA", "Ideal: 512x512px")}
+                        {renderLogoUploadSection("login", "Logo da Tela de Login", "Ideal: 200x80px")}
+                      </div>
+                      <div className="flex justify-end mt-6">
+                        <Button onClick={handleSaveGlobalSettings} disabled={isLoading}>
+                          {isLoading ? "Salvando..." : "Salvar Identidade Visual"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {renderLogoUploadSection(
-                      "pwa",
-                      "Logo PWA (App Móvel)",
-                      "PNG ou JPG de alta resolução (512x512 recomendado)",
-                    )}
-                    {renderLogoUploadSection(
-                      "login",
-                      "Logo da Tela de Login",
-                      "Logo para a tela de login (máx. 2MB)",
-                    )}
-                  </div>
-
-                  <div className="pt-4">
-                    <Button
-                      className="bg-primary hover:bg-primary/90"
-                      onClick={handleSaveGlobalSettings}
-                      disabled={isLoading}
-                    >
-                      {isLoading
-                        ? "Salvando..."
-                        : "Salvar Configurações do Sistema"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* System Preferences */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Preferências Globais do Sistema</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <Label className="text-base font-medium">
-                        Ativar novos cadastros automaticamente
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Novas clínicas ficam ativas sem aprovação manual
-                      </p>
-                    </div>
-                    <Switch
-                      checked={systemPreferences.autoActivateClinics}
-                      onCheckedChange={(checked) =>
-                        setSystemPreferences((prev) => ({
-                          ...prev,
-                          autoActivateClinics: checked,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <Label className="text-base font-medium">
-                        Permitir branding individual por clínica
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Cada clínica pode personalizar sua própria marca
-                      </p>
-                    </div>
-                    <Switch
-                      checked={systemPreferences.individualBranding}
-                      onCheckedChange={(checked) =>
-                        setSystemPreferences((prev) => ({
-                          ...prev,
-                          individualBranding: checked,
-                        }))
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                  {/* System Preferences */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Preferências do Sistema</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label>Tema Padrão</Label>
+                        <Select
+                          value={systemPreferences.defaultTheme}
+                          onValueChange={(value) =>
+                            setSystemPreferences((prev) => ({
+                              ...prev,
+                              defaultTheme: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="light">Claro</SelectItem>
+                            <SelectItem value="dark">Escuro</SelectItem>
+                            <SelectItem value="system">Padrão do Sistema</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label>Ativar novas clínicas automaticamente</Label>
+                        <Switch
+                          checked={systemPreferences.autoActivateClinics}
+                          onCheckedChange={(checked) =>
+                            setSystemPreferences((prev) => ({
+                              ...prev,
+                              autoActivateClinics: checked,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-end mt-6">
+                        <Button onClick={handleSaveGlobalSettings} disabled={isLoading}>
+                          {isLoading ? "Salvando..." : "Salvar Preferências"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </TabsContent>
           )}
         </Tabs>

@@ -89,6 +89,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 // Helper function to format time ago
 const formatTimeAgo = (date: string) => {
@@ -228,6 +229,8 @@ const SuperAdminDashboard = () => {
   });
 
   const itemsPerPage = 5;
+
+  const navigate = useNavigate();
 
   // Load real data from Supabase
   useEffect(() => {
@@ -1057,24 +1060,20 @@ const SuperAdminDashboard = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem
-                onClick={() => (window.location.href = "/settings")}
+                onClick={() => navigate("/settings")}
               >
                 <User className="mr-2 h-4 w-4" />
                 Perfil
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() =>
-                  (window.location.href = "/settings?tab=preferences")
-                }
+                onClick={() => navigate("/settings?tab=preferences")}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Preferências
               </DropdownMenuItem>
               {user?.role === "super_admin" && (
                 <DropdownMenuItem
-                  onClick={() =>
-                    (window.location.href = "/settings?tab=system")
-                  }
+                  onClick={() => navigate("/settings?tab=system")}
                 >
                   <Palette className="mr-2 h-4 w-4" />
                   Sistema
@@ -3285,20 +3284,14 @@ const SuperAdminDashboard = () => {
               </div>
 
               <button
-                onClick={() => {
-                  window.location.href = "/settings";
-                  setSidebarOpen(false);
-                }}
+                onClick={() => navigate("/settings")}
                 className="w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors text-foreground hover:bg-muted"
               >
                 <User className="h-5 w-5 mr-3" />
                 Perfil
               </button>
               <button
-                onClick={() => {
-                  window.location.href = "/settings?tab=preferences";
-                  setSidebarOpen(false);
-                }}
+                onClick={() => navigate("/settings?tab=preferences")}
                 className="w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors text-foreground hover:bg-muted"
               >
                 <Settings className="h-5 w-5 mr-3" />
@@ -3306,10 +3299,7 @@ const SuperAdminDashboard = () => {
               </button>
               {user?.role === "super_admin" && (
                 <button
-                  onClick={() => {
-                    window.location.href = "/settings?tab=system";
-                    setSidebarOpen(false);
-                  }}
+                  onClick={() => navigate("/settings?tab=system")}
                   className="w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors text-foreground hover:bg-muted"
                 >
                   <Palette className="h-5 w-5 mr-3" />
