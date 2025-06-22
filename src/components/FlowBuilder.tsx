@@ -103,12 +103,14 @@ import {
   Circle,
   CheckSquare,
   Monitor,
+  Clock,
 } from "lucide-react";
 
 // Enhanced Custom Node Components with better connection visualization
 
 const StartNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -132,6 +134,12 @@ const StartNode = ({ data, id, selected }) => {
     const showContinueButtonCheckbox = document.getElementById(
       `start-show-continue-${id}`,
     );
+    const isLinkedFlowCheckbox = document.getElementById(
+      `start-is-linked-flow-${id}`,
+    );
+    const sourceFlowIdInput = document.getElementById(
+      `start-source-flow-id-${id}`,
+    );
 
     if (
       titleInput &&
@@ -142,7 +150,9 @@ const StartNode = ({ data, id, selected }) => {
       enableTimerCheckbox &&
       timerAmountInput &&
       timerUnitSelect &&
-      showContinueButtonCheckbox
+      showContinueButtonCheckbox &&
+      isLinkedFlowCheckbox &&
+      sourceFlowIdInput
     ) {
       updateNodeData({
         label: titleInput.value || "Início",
@@ -154,9 +164,23 @@ const StartNode = ({ data, id, selected }) => {
         timerAmount: parseInt(timerAmountInput.value) || 1,
         timerUnit: timerUnitSelect.value || "hours",
         showContinueButton: showContinueButtonCheckbox.checked || false,
+        isLinkedFlow: isLinkedFlowCheckbox.checked || false,
+        sourceFlowId: sourceFlowIdInput.value || "",
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   const renderMediaPreview = () => {
@@ -261,11 +285,28 @@ const StartNode = ({ data, id, selected }) => {
 
         {renderMediaPreview()}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
         {/* Timer indicator */}
         {data.enableTimer && (
           <div className="mt-3 p-2 bg-emerald-100 dark:bg-emerald-800/30 rounded border border-emerald-200 dark:border-emerald-700">
             <div className="flex items-center text-xs text-emerald-700 dark:text-emerald-300">
-              <Zap className="h-3 w-3 mr-1" />
+              <Clock className="h-3 w-3 mr-1" />
               Timer: {data.timerAmount}{" "}
               {data.timerUnit === "minutes"
                 ? "min"
@@ -282,6 +323,25 @@ const StartNode = ({ data, id, selected }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Linked flow indicator */}
+        {data.isLinkedFlow && data.sourceFlowId && (
+          <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-800/30 rounded border border-purple-200 dark:border-purple-700">
+            <div className="flex items-center text-xs text-purple-700 dark:text-purple-300">
+              <GitBranch className="h-3 w-3 mr-1" />
+              Vinculado ao fluxo: {data.sourceFlowId}
+            </div>
+          </div>
+        )}
+
+        {/* Input Handle for linked flows */}
+        {(data.isLinkedFlow || showConnectionPoints) && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
         )}
 
         <Handle
@@ -339,7 +399,9 @@ const StartNode = ({ data, id, selected }) => {
                   </Label>
                   <Select
                     defaultValue={data.mediaType || "none"}
-                    onValueChange={(value) => {}}
+                    onValueChange={(value) =>
+                      handleInputChange("mediaType", value)
+                    }
                     name={`start-media-type-${id}`}
                   >
                     <SelectTrigger>
@@ -380,7 +442,7 @@ const StartNode = ({ data, id, selected }) => {
                   htmlFor={`start-enable-timer-${id}`}
                   className="flex items-center"
                 >
-                  <Zap className="h-4 w-4 mr-2 text-emerald-500" />
+                  <Clock className="h-4 w-4 mr-2 text-emerald-500" />
                   Habilitar Temporizador Automático
                 </Label>
               </div>
@@ -409,7 +471,12 @@ const StartNode = ({ data, id, selected }) => {
                   >
                     Unidade
                   </Label>
-                  <Select defaultValue={data.timerUnit || "hours"}>
+                  <Select
+                    defaultValue={data.timerUnit || "hours"}
+                    onValueChange={(value) =>
+                      handleInputChange("timerUnit", value)
+                    }
+                  >
                     <SelectTrigger id={`start-timer-unit-${id}`}>
                       <SelectValue />
                     </SelectTrigger>
@@ -427,6 +494,9 @@ const StartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`start-show-continue-${id}`}
                   defaultChecked={data.showContinueButton || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showContinueButton", checked)
+                  }
                 />
                 <Label
                   htmlFor={`start-show-continue-${id}`}
@@ -437,9 +507,43 @@ const StartNode = ({ data, id, selected }) => {
                 </Label>
               </div>
 
+              {/* Linked Flow Configuration */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id={`start-is-linked-flow-${id}`}
+                    defaultChecked={data.isLinkedFlow || false}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("isLinkedFlow", checked)
+                    }
+                  />
+                  <Label
+                    htmlFor={`start-is-linked-flow-${id}`}
+                    className="flex items-center"
+                  >
+                    <GitBranch className="h-4 w-4 mr-2 text-purple-500" />
+                    Este é um fluxo vinculado
+                  </Label>
+                </div>
+
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor={`start-source-flow-id-${id}`}>
+                    ID do Fluxo de Origem
+                  </Label>
+                  <Input
+                    id={`start-source-flow-id-${id}`}
+                    defaultValue={data.sourceFlowId || ""}
+                    placeholder="ID do fluxo de origem"
+                    onChange={(e) =>
+                      handleInputChange("sourceFlowId", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex items-start space-x-2">
-                  <Zap className="h-4 w-4 text-blue-500 mt-0.5" />
+                  <Clock className="h-4 w-4 text-blue-500 mt-0.5" />
                   <div className="text-xs text-blue-700 dark:text-blue-300">
                     <p className="font-medium mb-1">
                       Como funciona o temporizador:
@@ -461,6 +565,10 @@ const StartNode = ({ data, id, selected }) => {
                         • Conecte este nó a um nó "Fim" para marcar o final de
                         uma etapa
                       </li>
+                      <li>
+                        • Marque como "fluxo vinculado" para receber conexões de
+                        outros fluxos
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -481,6 +589,7 @@ const StartNode = ({ data, id, selected }) => {
 
 const QuestionNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
   const [options, setOptions] = useState(
     data.options || ["Opção 1", "Opção 2"],
   );
@@ -545,6 +654,65 @@ const QuestionNode = ({ data, id, selected }) => {
     if (checked) {
       setAllowTextInput(true);
     }
+    // Auto-save
+    updateNodeData({
+      ...data,
+      textInputOnly: checked,
+      allowTextInput: checked ? true : allowTextInput,
+    });
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
+  };
+
+  // Auto-save on state changes
+  const handleQuestionTypeChange = (value) => {
+    setQuestionType(value);
+    updateNodeData({
+      ...data,
+      questionType: value,
+    });
+  };
+
+  const handleUseEmojisChange = (checked) => {
+    setUseEmojis(checked);
+    updateNodeData({
+      ...data,
+      useEmojis: checked,
+    });
+  };
+
+  const handleUseImagesChange = (checked) => {
+    setUseImages(checked);
+    updateNodeData({
+      ...data,
+      useImages: checked,
+    });
+  };
+
+  const handleAllowTextInputChange = (checked) => {
+    setAllowTextInput(checked);
+    updateNodeData({
+      ...data,
+      allowTextInput: checked,
+    });
+  };
+
+  const handleOptionsChange = (newOptions) => {
+    setOptions(newOptions);
+    updateNodeData({
+      ...data,
+      options: newOptions,
+    });
   };
 
   return (
@@ -672,6 +840,32 @@ const QuestionNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         {/* Single output handle for text-input-only questions */}
         {data.textInputOnly && (
           <Handle
@@ -698,6 +892,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 id={`question-title-${id}`}
                 defaultValue={data.label || "Pergunta"}
                 placeholder="Título da pergunta"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -707,12 +902,16 @@ const QuestionNode = ({ data, id, selected }) => {
                 defaultValue={data.question || "Qual é a sua pergunta?"}
                 placeholder="Digite a pergunta aqui"
                 rows={3}
+                onChange={(e) => handleInputChange("question", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Tipo de Resposta</Label>
-              <Select value={questionType} onValueChange={setQuestionType}>
+              <Select
+                value={questionType}
+                onValueChange={handleQuestionTypeChange}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -728,7 +927,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`use-emojis-${id}`}
                   checked={useEmojis}
-                  onCheckedChange={setUseEmojis}
+                  onCheckedChange={handleUseEmojisChange}
                 />
                 <Label
                   htmlFor={`use-emojis-${id}`}
@@ -742,7 +941,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`use-images-${id}`}
                   checked={useImages}
-                  onCheckedChange={setUseImages}
+                  onCheckedChange={handleUseImagesChange}
                 />
                 <Label
                   htmlFor={`use-images-${id}`}
@@ -756,7 +955,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`allow-text-input-${id}`}
                   checked={allowTextInput}
-                  onCheckedChange={setAllowTextInput}
+                  onCheckedChange={handleAllowTextInputChange}
                   disabled={textInputOnly}
                 />
                 <Label
@@ -790,7 +989,13 @@ const QuestionNode = ({ data, id, selected }) => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={addOption}
+                  onClick={() => {
+                    const newOptions = [
+                      ...options,
+                      `Opção ${options.length + 1}`,
+                    ];
+                    handleOptionsChange(newOptions);
+                  }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar
@@ -801,7 +1006,11 @@ const QuestionNode = ({ data, id, selected }) => {
                   <div key={index} className="flex items-center space-x-2">
                     <Input
                       value={option}
-                      onChange={(e) => updateOption(index, e.target.value)}
+                      onChange={(e) => {
+                        const newOptions = [...options];
+                        newOptions[index] = e.target.value;
+                        handleOptionsChange(newOptions);
+                      }}
                       placeholder={`Opção ${index + 1}`}
                     />
                     {options.length > 2 && (
@@ -809,7 +1018,14 @@ const QuestionNode = ({ data, id, selected }) => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => removeOption(index)}
+                        onClick={() => {
+                          if (options.length > 2) {
+                            const newOptions = options.filter(
+                              (_, i) => i !== index,
+                            );
+                            handleOptionsChange(newOptions);
+                          }
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -833,6 +1049,7 @@ const QuestionNode = ({ data, id, selected }) => {
 
 const MessageNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -852,6 +1069,18 @@ const MessageNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -913,6 +1142,32 @@ const MessageNode = ({ data, id, selected }) => {
           {data.message || "Conteúdo da mensagem"}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         {/* Output Handle */}
         <Handle
           type="source"
@@ -937,6 +1192,7 @@ const MessageNode = ({ data, id, selected }) => {
                 id={`message-title-${id}`}
                 defaultValue={data.label || "Mensagem"}
                 placeholder="Título da mensagem"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -946,6 +1202,7 @@ const MessageNode = ({ data, id, selected }) => {
                 defaultValue={data.message || "Conteúdo da mensagem"}
                 placeholder="Digite o conteúdo da mensagem aqui"
                 rows={5}
+                onChange={(e) => handleInputChange("message", e.target.value)}
               />
             </div>
           </div>
@@ -963,6 +1220,7 @@ const MessageNode = ({ data, id, selected }) => {
 
 const VideoNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -985,6 +1243,18 @@ const VideoNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1052,6 +1322,32 @@ const VideoNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1075,6 +1371,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-title-${id}`}
                 defaultValue={data.label || "Vídeo"}
                 placeholder="Título do nó de vídeo"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1083,6 +1380,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do vídeo para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1091,6 +1389,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-url-${id}`}
                 defaultValue={data.videoUrl || ""}
                 placeholder="https://youtube.com/watch?v=..."
+                onChange={(e) => handleInputChange("videoUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1100,6 +1399,9 @@ const VideoNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do vídeo (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1117,6 +1419,7 @@ const VideoNode = ({ data, id, selected }) => {
 
 const AudioNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1139,6 +1442,18 @@ const AudioNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1206,6 +1521,32 @@ const AudioNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1229,6 +1570,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-title-${id}`}
                 defaultValue={data.label || "Áudio"}
                 placeholder="Título do nó de áudio"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1237,6 +1579,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do áudio para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1245,6 +1588,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-url-${id}`}
                 defaultValue={data.audioUrl || ""}
                 placeholder="https://exemplo.com/audio.mp3"
+                onChange={(e) => handleInputChange("audioUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1254,6 +1598,9 @@ const AudioNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do áudio (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1271,6 +1618,7 @@ const AudioNode = ({ data, id, selected }) => {
 
 const EbookNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1293,6 +1641,18 @@ const EbookNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1360,6 +1720,32 @@ const EbookNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1383,6 +1769,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-title-${id}`}
                 defaultValue={data.label || "E-book"}
                 placeholder="Título do nó de e-book"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1391,6 +1778,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do e-book para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1399,6 +1787,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-url-${id}`}
                 defaultValue={data.ebookUrl || ""}
                 placeholder="https://exemplo.com/ebook.pdf"
+                onChange={(e) => handleInputChange("ebookUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1408,6 +1797,9 @@ const EbookNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do e-book (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1425,6 +1817,7 @@ const EbookNode = ({ data, id, selected }) => {
 
 const EndNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1441,12 +1834,20 @@ const EndNode = ({ data, id, selected }) => {
     const continueButtonTextInput = document.getElementById(
       `end-continue-text-${id}`,
     );
+    const connectToFlowCheckbox = document.getElementById(
+      `end-connect-to-flow-${id}`,
+    );
+    const targetFlowIdInput = document.getElementById(
+      `end-target-flow-id-${id}`,
+    );
 
     if (
       titleInput &&
       messageInput &&
       showContinueButtonCheckbox &&
-      continueButtonTextInput
+      continueButtonTextInput &&
+      connectToFlowCheckbox &&
+      targetFlowIdInput
     ) {
       updateNodeData({
         label: (titleInput as HTMLInputElement).value || "Fim",
@@ -1456,9 +1857,16 @@ const EndNode = ({ data, id, selected }) => {
         continueButtonText:
           (continueButtonTextInput as HTMLInputElement).value ||
           "Continuar Fluxo",
+        connectToFlow:
+          (connectToFlowCheckbox as HTMLInputElement).checked || false,
+        targetFlowId: (targetFlowIdInput as HTMLInputElement).value || "",
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
   };
 
   return (
@@ -1519,6 +1927,23 @@ const EndNode = ({ data, id, selected }) => {
           {data.message || "Fim do fluxo"}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
         {/* Continue button indicator */}
         {data.showContinueButton && (
           <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800/30 rounded border border-blue-200 dark:border-blue-700">
@@ -1529,12 +1954,22 @@ const EndNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Flow connection indicator */}
+        {data.connectToFlow && data.targetFlowId && (
+          <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-800/30 rounded border border-purple-200 dark:border-purple-700">
+            <div className="flex items-center text-xs text-purple-700 dark:text-purple-300">
+              <GitBranch className="h-3 w-3 mr-1" />
+              Conectado ao fluxo: {data.targetFlowId}
+            </div>
+          </div>
+        )}
+
         {/* Output Handle for continuing flow */}
-        {data.showContinueButton && (
+        {(data.showContinueButton || showConnectionPoints) && (
           <Handle
             type="source"
             position={Position.Right}
-            className="w-3 h-3 bg-blue-500 border-2 border-white"
+            className={`w-3 h-3 ${data.showContinueButton ? "bg-blue-500" : "bg-purple-500"} border-2 border-white`}
           />
         )}
       </div>
@@ -1573,6 +2008,9 @@ const EndNode = ({ data, id, selected }) => {
                 <Switch
                   id={`end-show-continue-${id}`}
                   defaultChecked={data.showContinueButton || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showContinueButton", checked)
+                  }
                 />
                 <Label
                   htmlFor={`end-show-continue-${id}`}
@@ -1591,6 +2029,41 @@ const EndNode = ({ data, id, selected }) => {
                   id={`end-continue-text-${id}`}
                   defaultValue={data.continueButtonText || "Continuar Fluxo"}
                   placeholder="Continuar Fluxo"
+                  onChange={(e) =>
+                    handleInputChange("continueButtonText", e.target.value)
+                  }
+                />
+              </div>
+
+              {/* Connect to another flow */}
+              <div className="flex items-center space-x-2 mt-4">
+                <Switch
+                  id={`end-connect-to-flow-${id}`}
+                  defaultChecked={data.connectToFlow || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("connectToFlow", checked)
+                  }
+                />
+                <Label
+                  htmlFor={`end-connect-to-flow-${id}`}
+                  className="flex items-center"
+                >
+                  <GitBranch className="h-4 w-4 mr-2 text-purple-500" />
+                  Conectar a outro fluxo
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`end-target-flow-id-${id}`}>
+                  ID do Fluxo Alvo
+                </Label>
+                <Input
+                  id={`end-target-flow-id-${id}`}
+                  defaultValue={data.targetFlowId || ""}
+                  placeholder="ID do fluxo para conectar"
+                  onChange={(e) =>
+                    handleInputChange("targetFlowId", e.target.value)
+                  }
                 />
               </div>
 
@@ -1611,6 +2084,9 @@ const EndNode = ({ data, id, selected }) => {
                       <li>
                         • Conecte a saída deste nó a um novo nó "Início" para
                         criar etapas sequenciais
+                      </li>
+                      <li>
+                        • Conecte a outro fluxo para criar fluxos encadeados
                       </li>
                     </ul>
                   </div>
@@ -1633,6 +2109,7 @@ const EndNode = ({ data, id, selected }) => {
 // Chart Node for data visualization with enhanced interactivity
 const ChartNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [chartData, setChartData] = useState({
@@ -2575,6 +3052,32 @@ const ChartNode = ({ data, id, selected }) => {
           {renderChartPreview()}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -2598,6 +3101,7 @@ const ChartNode = ({ data, id, selected }) => {
                 id={`chart-title-${id}`}
                 defaultValue={data.label || "Gráfico"}
                 placeholder="Título do gráfico"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -2609,12 +3113,18 @@ const ChartNode = ({ data, id, selected }) => {
                 }
                 placeholder="Descrição do gráfico"
                 rows={2}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`chart-type-${id}`}>Tipo de Visualização</Label>
-              <Select defaultValue={data.chartType || "progress"}>
+              <Select
+                defaultValue={data.chartType || "progress"}
+                onValueChange={(value) => handleInputChange("chartType", value)}
+              >
                 <SelectTrigger id={`chart-type-${id}`}>
                   <SelectValue />
                 </SelectTrigger>
@@ -2640,6 +3150,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.currentPercentage || 65}
                   placeholder="65"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "currentPercentage",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -2653,6 +3169,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.idealPercentage || 85}
                   placeholder="85"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "idealPercentage",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
             </div>
@@ -2670,7 +3192,12 @@ const ChartNode = ({ data, id, selected }) => {
 
               <div className="space-y-2">
                 <Label htmlFor={`chart-quality-${id}`}>Grau de Qualidade</Label>
-                <Select defaultValue={data.qualityLevel || "good"}>
+                <Select
+                  defaultValue={data.qualityLevel || "good"}
+                  onValueChange={(value) =>
+                    handleInputChange("qualityLevel", value)
+                  }
+                >
                   <SelectTrigger id={`chart-quality-${id}`}>
                     <SelectValue />
                   </SelectTrigger>
@@ -2687,6 +3214,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-patient-${id}`}
                   defaultChecked={data.showPatientPosition || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showPatientPosition", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-patient-${id}`}>
                   Mostrar Posição do Paciente
@@ -2704,6 +3234,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.patientPosition || 50}
                   placeholder="50"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "patientPosition",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
 
@@ -2711,6 +3247,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-trend-${id}`}
                   defaultChecked={data.showTrendIndicator || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showTrendIndicator", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-trend-${id}`}>
                   Mostrar Indicador de Tendência
@@ -2721,6 +3260,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-comparison-${id}`}
                   defaultChecked={data.showComparison || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showComparison", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-comparison-${id}`}>
                   Mostrar Comparação com Valor Anterior
@@ -2738,6 +3280,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.comparisonValue || 40}
                   placeholder="40"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "comparisonValue",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
 
@@ -2745,6 +3293,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-use-random-data-${id}`}
                   defaultChecked={data.useRandomData || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("useRandomData", checked)
+                  }
                 />
                 <Label htmlFor={`chart-use-random-data-${id}`}>
                   Usar Dados Aleatórios (Apenas para Demonstração)
@@ -2929,6 +3480,30 @@ export const FlowBuilder = () => {
         }
       }
 
+      // Check for flow connections (end node to start node)
+      if (
+        sourceNode &&
+        targetNode &&
+        sourceNode.type === "endNode" &&
+        targetNode.type === "startNode"
+      ) {
+        // Update the end node with connection information
+        if (window.updateNodeData) {
+          window.updateNodeData(sourceNode.id, {
+            ...sourceNode.data,
+            connectToFlow: true,
+            targetFlowId: targetNode.id.split("-")[1], // Extract flow ID from node ID
+          });
+
+          // Update the start node with connection information
+          window.updateNodeData(targetNode.id, {
+            ...targetNode.data,
+            isLinkedFlow: true,
+            sourceFlowId: sourceNode.id.split("-")[1], // Extract flow ID from node ID
+          });
+        }
+      }
+
       // Check for duplicate connections
       const existingConnection = edges.find(
         (edge) =>
@@ -3089,6 +3664,7 @@ export const FlowBuilder = () => {
         alert(
           "Já existe um nó de início no fluxo. Deve haver apenas um nó de início.",
         );
+        setShowAddNodeDialog(false);
         return;
       }
     }
@@ -3117,6 +3693,8 @@ export const FlowBuilder = () => {
           timerAmount: 1,
           timerUnit: "hours",
           showContinueButton: false,
+          isLinkedFlow: false,
+          sourceFlowId: "",
         };
         break;
       case "question":
@@ -3164,6 +3742,8 @@ export const FlowBuilder = () => {
           message: "Fim do fluxo",
           showContinueButton: false,
           continueButtonText: "Continuar Fluxo",
+          connectToFlow: false,
+          targetFlowId: "",
         };
         break;
       case "chart":
@@ -3263,11 +3843,20 @@ export const FlowBuilder = () => {
   const [flowAssignments, setFlowAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [realPatients, setRealPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
 
   // Load assignments when dialog opens
   useEffect(() => {
     if (showAssignmentsDialog) {
       loadFlowAssignments();
+    }
+  }, [showAssignmentsDialog]);
+
+  // Load real patients when assignment dialog opens
+  useEffect(() => {
+    if (showAssignmentsDialog) {
+      loadRealPatients();
     }
   }, [showAssignmentsDialog]);
 
@@ -3542,6 +4131,43 @@ export const FlowBuilder = () => {
     }
   };
 
+  // Function to load real patients from Supabase
+  const loadRealPatients = async () => {
+    try {
+      setLoadingPatients(true);
+      setSaveError(null);
+
+      // Get current user for RLS compliance
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Você precisa estar logado para carregar pacientes.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, full_name, email, role")
+        .eq("role", "patient")
+        .order("full_name", { ascending: true });
+
+      if (error) {
+        console.error("Error loading patients:", error);
+        alert(`Erro ao carregar pacientes: ${error.message}`);
+        setSaveError(error);
+      } else {
+        setRealPatients(data || []);
+      }
+    } catch (error) {
+      console.error("Exception loading patients:", error);
+      alert(`Erro inesperado ao carregar pacientes: ${error.message}`);
+      setSaveError(error);
+    } finally {
+      setLoadingPatients(false);
+    }
+  };
+
   // Function to assign flow to patients
   const assignFlowToPatients = async (formData) => {
     try {
@@ -3608,10 +4234,10 @@ export const FlowBuilder = () => {
         return;
       }
 
-      // Now create assignments for each selected patient
-      const assignments = selectedPatients.map((patientIndex) => ({
+      // Now create assignments for each selected patient using real patient IDs
+      const assignments = selectedPatients.map((patientId) => ({
         flow_id: flowId,
-        patient_id: `patient-${patientIndex + 1}`, // Mock patient IDs
+        patient_id: patientId, // Real patient IDs from database
         start_date: startDate,
         frequency: frequency,
         repetitions: repetitions,
@@ -3769,9 +4395,19 @@ export const FlowBuilder = () => {
     }
 
     // Check for unreachable nodes (nodes that can't be reached from start)
-    if (startNodes.length === 1) {
+    const mainStartNodes = startNodes.filter((node) => !node.data.isLinkedFlow);
+    const linkedStartNodes = startNodes.filter(
+      (node) => node.data.isLinkedFlow,
+    );
+
+    if (mainStartNodes.length === 1) {
       const reachableNodes = new Set();
-      const queue = [startNodes[0].id];
+      const queue = [mainStartNodes[0].id];
+
+      // Add all linked start nodes to the queue as well
+      linkedStartNodes.forEach((node) => {
+        queue.push(node.id);
+      });
 
       while (queue.length > 0) {
         const currentId = queue.shift();
@@ -3960,9 +4596,7 @@ export const FlowBuilder = () => {
                         document.querySelectorAll(
                           'input[type="checkbox"]:checked',
                         ),
-                      ).map((checkbox) =>
-                        parseInt(checkbox.id.replace("patient-", "")),
-                      ),
+                      ).map((checkbox) => (checkbox as HTMLInputElement).value),
                       startDate:
                         (
                           document.querySelector(
@@ -4033,7 +4667,6 @@ export const FlowBuilder = () => {
             title="Ver Atribuições"
           >
             <ListChecks className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Atribuições</span>
           </Button>
           <Button
             variant="outline"
@@ -4042,7 +4675,6 @@ export const FlowBuilder = () => {
             title="Visualizar"
           >
             <Monitor className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Visualizar</span>
           </Button>
         </div>
       </div>
