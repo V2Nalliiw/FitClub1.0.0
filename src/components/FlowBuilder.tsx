@@ -3338,6 +3338,264 @@ const ChartNode = ({ data, id, selected }) => {
   );
 };
 
+// WhatsApp Notification Node Component
+const WhatsAppNotificationNode = ({ data, id, selected }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
+
+  const updateNodeData = (newData) => {
+    if (window.updateNodeData) {
+      window.updateNodeData(id, newData);
+    }
+  };
+
+  const saveChanges = () => {
+    const titleInput = document.getElementById(`whatsapp-title-${id}`);
+    const messageInput = document.getElementById(`whatsapp-message-${id}`);
+    const phoneFieldInput = document.getElementById(
+      `whatsapp-phone-field-${id}`,
+    );
+    const testPhoneInput = document.getElementById(`whatsapp-test-phone-${id}`);
+
+    if (titleInput && messageInput && phoneFieldInput) {
+      updateNodeData({
+        label: (titleInput as HTMLInputElement).value || "Notificação WhatsApp",
+        message:
+          (messageInput as HTMLTextAreaElement).value ||
+          "Olá! Esta é uma mensagem do seu especialista.",
+        phoneField: (phoneFieldInput as HTMLInputElement).value || "phone",
+        testPhone: (testPhoneInput as HTMLInputElement).value || "",
+      });
+    }
+    setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
+  };
+
+  return (
+    <>
+      <div
+        className={`bg-green-50 dark:bg-green-900/30 rounded-lg shadow-lg p-4 border-2 min-w-[250px] ${
+          selected
+            ? "border-green-500 shadow-green-200"
+            : "border-green-200 dark:border-green-800"
+        }`}
+      >
+        {/* Input Handle */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="w-3 h-3 bg-green-500 border-2 border-white"
+        />
+
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center">
+            <MessageSquare className="h-4 w-4 mr-2 text-green-500" />
+            {data.label || "Notificação WhatsApp"}
+          </h3>
+          <div className="flex space-x-1">
+            <button
+              className="p-1 hover:bg-green-100 dark:hover:bg-green-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEditModal(true);
+              }}
+              title="Editar"
+            >
+              <Edit className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <button
+              className="p-1 hover:bg-green-100 dark:hover:bg-green-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.duplicateNode) window.duplicateNode(id);
+              }}
+              title="Duplicar"
+            >
+              <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <button
+              className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.deleteNode) window.deleteNode(id);
+              }}
+              title="Excluir"
+            >
+              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          {data.message || "Olá! Esta é uma mensagem do seu especialista."}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-green-200 dark:border-green-800 mb-3">
+          <div className="flex items-center text-xs text-green-700 dark:text-green-300">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Mensagem será enviada via WhatsApp
+          </div>
+          {data.phoneField && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <User className="h-3 w-3 mr-1" />
+              Campo de telefone: {data.phoneField}
+            </div>
+          )}
+        </div>
+
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
+        {/* Output Handle */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="w-3 h-3 bg-green-500 border-2 border-white"
+        />
+      </div>
+
+      {/* Edit Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Notificação WhatsApp</DialogTitle>
+            <DialogDescription>
+              Configure a mensagem que será enviada via WhatsApp para o
+              paciente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-title-${id}`}>Título</Label>
+              <Input
+                id={`whatsapp-title-${id}`}
+                defaultValue={data.label || "Notificação WhatsApp"}
+                placeholder="Título da notificação"
+                onChange={(e) => handleInputChange("label", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-message-${id}`}>
+                Mensagem WhatsApp
+              </Label>
+              <Textarea
+                id={`whatsapp-message-${id}`}
+                defaultValue={
+                  data.message ||
+                  "Olá! Esta é uma mensagem do seu especialista."
+                }
+                placeholder="Digite a mensagem que será enviada via WhatsApp"
+                rows={5}
+                onChange={(e) => handleInputChange("message", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-phone-field-${id}`}>
+                Campo de Telefone
+              </Label>
+              <Input
+                id={`whatsapp-phone-field-${id}`}
+                defaultValue={data.phoneField || "phone"}
+                placeholder="Nome do campo que contém o telefone do paciente"
+                onChange={(e) =>
+                  handleInputChange("phoneField", e.target.value)
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Nome do campo que contém o número de telefone do paciente no
+                formato E.164 (ex: +5511999999999)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-test-phone-${id}`}>
+                Telefone para Teste (opcional)
+              </Label>
+              <Input
+                id={`whatsapp-test-phone-${id}`}
+                defaultValue={data.testPhone || ""}
+                placeholder="+5511999999999"
+                onChange={(e) => handleInputChange("testPhone", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Número de telefone para testes (formato E.164). Se preenchido,
+                as mensagens serão enviadas para este número em vez do telefone
+                do paciente.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start space-x-2">
+                <MessageSquare className="h-4 w-4 text-amber-500 mt-0.5" />
+                <div className="text-xs text-amber-700 dark:text-amber-300">
+                  <p className="font-medium mb-1">Informações importantes:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      • O número de telefone deve estar no formato E.164 (ex:
+                      +5511999999999)
+                    </li>
+                    <li>
+                      • A mensagem será enviada via WhatsApp usando a Edge
+                      Function do Supabase
+                    </li>
+                    <li>
+                      • O envio só ocorre quando o paciente atinge este nó
+                      durante a execução do fluxo
+                    </li>
+                    <li>
+                      • Certifique-se de que o paciente tem um número de
+                      WhatsApp válido cadastrado
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={saveChanges}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 // Node types configuration
 const nodeTypes = {
   startNode: StartNode,
@@ -3348,6 +3606,7 @@ const nodeTypes = {
   ebookNode: EbookNode,
   endNode: EndNode,
   chartNode: ChartNode,
+  whatsAppNode: WhatsAppNotificationNode,
 };
 
 // Main FlowBuilder Component
@@ -3452,6 +3711,45 @@ export const FlowBuilder = () => {
       }
     };
   }, [nodes, setNodes, setEdges]);
+
+  // Function to execute WhatsApp notification during flow execution
+  const executeWhatsAppNotification = async (nodeData, patientData) => {
+    try {
+      // Get the phone number from patient data or use test phone if available
+      const phoneField = nodeData.phoneField || "phone";
+      const phoneNumber =
+        nodeData.testPhone || (patientData && patientData[phoneField]);
+
+      if (!phoneNumber) {
+        console.error("No phone number available for WhatsApp notification");
+        return false;
+      }
+
+      // Call the Supabase Edge Function to send the WhatsApp message
+      const { data, error } = await supabase.functions.invoke(
+        "send-whatsapp-notification",
+        {
+          body: {
+            to: phoneNumber,
+            message:
+              nodeData.message ||
+              "Olá! Esta é uma mensagem do seu especialista.",
+          },
+        },
+      );
+
+      if (error) {
+        console.error("Error sending WhatsApp notification:", error);
+        return false;
+      }
+
+      console.log("WhatsApp notification sent successfully:", data);
+      return true;
+    } catch (error) {
+      console.error("Exception sending WhatsApp notification:", error);
+      return false;
+    }
+  };
 
   // Handle connections between nodes
   const onConnect = useCallback(
@@ -3567,6 +3865,10 @@ export const FlowBuilder = () => {
             edgeColor = "#0ea5e9"; // Sky
             edgeLabel = "Após gráfico";
             break;
+          case "whatsAppNode":
+            edgeColor = "#10b981"; // Green
+            edgeLabel = "Após envio";
+            break;
           default:
             edgeColor = "#6b7280"; // Gray
             edgeLabel = "Próximo";
@@ -3632,6 +3934,30 @@ export const FlowBuilder = () => {
   const onNodeClick = useCallback((event, node) => {
     event.stopPropagation();
     setSelectedNode(node);
+
+    // For testing WhatsApp node in design mode
+    if (node.type === "whatsAppNode" && event.altKey) {
+      const mockPatientData = {
+        phone: prompt(
+          "Enter a phone number for testing (E.164 format, e.g. +5511999999999):",
+          "+5511999999999",
+        ),
+      };
+
+      if (mockPatientData.phone) {
+        executeWhatsAppNotification(node.data, mockPatientData).then(
+          (success) => {
+            if (success) {
+              alert("WhatsApp test message sent successfully!");
+            } else {
+              alert(
+                "Failed to send WhatsApp test message. Check console for details.",
+              );
+            }
+          },
+        );
+      }
+    }
   }, []);
 
   // Handle node drag end to prevent stuck nodes
@@ -3757,6 +4083,14 @@ export const FlowBuilder = () => {
           showQualityInteraction: true,
           patientPosition: 50,
           showPatientPosition: true,
+        };
+        break;
+      case "whatsApp":
+        newNode.data = {
+          label: "Notificação WhatsApp",
+          message: "Olá! Esta é uma mensagem do seu especialista.",
+          phoneField: "phone",
+          testPhone: "",
         };
         break;
       default:
@@ -4890,6 +5224,18 @@ export const FlowBuilder = () => {
                   <Flag className="h-4 w-4" />
                   {!isToolbarCollapsed && <span className="ml-2">Fim</span>}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addNode("whatsApp")}
+                  title="WhatsApp"
+                  className={`${isToolbarCollapsed ? "justify-center p-2" : "justify-start text-xs sm:text-sm"}`}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {!isToolbarCollapsed && (
+                    <span className="ml-2">WhatsApp</span>
+                  )}
+                </Button>
                 {!isToolbarCollapsed && (
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2 col-span-2 sm:col-span-1" />
                 )}
@@ -5012,6 +5358,18 @@ export const FlowBuilder = () => {
                   <Flag className="h-6 w-6 text-gray-500" />
                 </div>
                 <CardTitle className="text-lg">Fim</CardTitle>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => addNode("whatsApp")}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                  <MessageSquare className="h-6 w-6 text-green-500" />
+                </div>
+                <CardTitle className="text-lg">WhatsApp</CardTitle>
               </CardContent>
             </Card>
           </div>
@@ -5349,7 +5707,8 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
       currentNode.type === "audioNode" ||
       currentNode.type === "ebookNode" ||
       currentNode.type === "endNode" ||
-      currentNode.type === "chartNode"
+      currentNode.type === "chartNode" ||
+      currentNode.type === "whatsAppNode"
     ) {
       setCanProceed(true);
       return;
@@ -5401,11 +5760,19 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
   const currentNode = nodes[currentStep] || nodes[0];
   const isLastStep = currentStep >= nodes.length - 1;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canProceed) return;
 
     const currentNode = nodes[currentStep];
     let nextNodeId = null;
+
+    // Execute WhatsApp notification if the current node is a WhatsApp node
+    if (currentNode.type === "whatsAppNode") {
+      // In a real implementation, this would use actual patient data
+      // For the preview, we'll just simulate the execution
+      console.log("Simulating WhatsApp notification in preview mode");
+      // In real execution mode, this would call executeWhatsAppNotification(currentNode.data, patientData)
+    }
 
     // Determine next node based on current node type and user choices
     if (currentNode.type === "questionNode") {
