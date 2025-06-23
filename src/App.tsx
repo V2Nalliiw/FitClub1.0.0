@@ -1,9 +1,5 @@
 import { Suspense } from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { Routes, Route, Navigate, useRoutes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Home from "./components/home";
 import SuperAdminDashboard from "./components/dashboards/SuperAdminDashboard";
@@ -13,6 +9,7 @@ import AchievementsPage from "./components/dashboards/AchievementsPage";
 import UnifiedSettingsPage from "./components/UnifiedSettingsPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoginPage from "./components/auth/LoginPage";
+import FormularioPage from "./components/FormularioPage";
 
 const AppRoutes = () => {
   const { user, isAuthenticated } = useAuth();
@@ -33,22 +30,119 @@ const AppRoutes = () => {
     }
   };
 
+  // Tempo routes for storyboards
+  const tempoRoutes = import.meta.env.VITE_TEMPO
+    ? useRoutes(require("tempo-routes").default || [])
+    : null;
+
   return (
-    <Routes>
-      <Route path="/" element={isAuthenticated ? <Navigate to={getDashboardPath()} replace /> : <Home />} />
-      <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={getDashboardPath()} replace />} />
-      <Route path="/login-page" element={!isAuthenticated ? <LoginPage /> : <Navigate to={getDashboardPath()} replace />} />
-      
-      <Route path="/dashboard/super-admin" element={<ProtectedRoute allowedRoles={["super_admin"]}><SuperAdminDashboard /></ProtectedRoute>} />
-      <Route path="/dashboard/chief-specialist" element={<ProtectedRoute allowedRoles={["chief_specialist"]}><ChiefSpecialistDashboard /></ProtectedRoute>} />
-      <Route path="/dashboard/chief-specialist/flowbuilder" element={<ProtectedRoute allowedRoles={["chief_specialist"]}><ChiefSpecialistDashboard view="flowbuilder" /></ProtectedRoute>} />
-      <Route path="/dashboard/specialist" element={<ProtectedRoute allowedRoles={["specialist", "chief_specialist"]}><ChiefSpecialistDashboard /></ProtectedRoute>} />
-      <Route path="/dashboard/patient" element={<ProtectedRoute allowedRoles={["patient"]}><PatientDashboard /></ProtectedRoute>} />
-      <Route path="/dashboard/achievements" element={<ProtectedRoute allowedRoles={["chief_specialist", "super_admin"]}><AchievementsPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin", "chief_specialist", "specialist", "patient"]}><UnifiedSettingsPage onBack={() => window.history.back()} /></ProtectedRoute>} />
-      
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      {tempoRoutes}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              <Navigate to={getDashboardPath()} replace />
+            ) : (
+              <Home />
+            )
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            !isAuthenticated ? (
+              <LoginPage />
+            ) : (
+              <Navigate to={getDashboardPath()} replace />
+            )
+          }
+        />
+        <Route
+          path="/login-page"
+          element={
+            !isAuthenticated ? (
+              <LoginPage />
+            ) : (
+              <Navigate to={getDashboardPath()} replace />
+            )
+          }
+        />
+
+        {/* Public form access route - no authentication required */}
+        <Route path="/formulario" element={<FormularioPage />} />
+
+        <Route
+          path="/dashboard/super-admin"
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/chief-specialist"
+          element={
+            <ProtectedRoute allowedRoles={["chief_specialist"]}>
+              <ChiefSpecialistDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/chief-specialist/flowbuilder"
+          element={
+            <ProtectedRoute allowedRoles={["chief_specialist"]}>
+              <ChiefSpecialistDashboard view="flowbuilder" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/specialist"
+          element={
+            <ProtectedRoute allowedRoles={["specialist", "chief_specialist"]}>
+              <ChiefSpecialistDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/patient"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/achievements"
+          element={
+            <ProtectedRoute allowedRoles={["chief_specialist", "super_admin"]}>
+              <AchievementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "chief_specialist",
+                "specialist",
+                "patient",
+              ]}
+            >
+              <UnifiedSettingsPage onBack={() => window.history.back()} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Tempo routes catch-all */}
+        {import.meta.env.VITE_TEMPO && <Route path="/tempobook/*" />}
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 };
 
