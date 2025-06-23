@@ -3524,39 +3524,6 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`whatsapp-phone-field-${id}`}>
-                Campo de Telefone
-              </Label>
-              <Input
-                id={`whatsapp-phone-field-${id}`}
-                defaultValue={data.phoneField || "phone"}
-                placeholder="Nome do campo que contém o telefone do paciente"
-                onChange={(e) =>
-                  handleInputChange("phoneField", e.target.value)
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                Nome do campo que contém o número de telefone do paciente no
-                formato E.164 (ex: +5511999999999)
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`whatsapp-test-phone-${id}`}>
-                Telefone para Teste (opcional)
-              </Label>
-              <Input
-                id={`whatsapp-test-phone-${id}`}
-                defaultValue={data.testPhone || ""}
-                placeholder="+5511999999999"
-                onChange={(e) => handleInputChange("testPhone", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Número de telefone para testes (formato E.164). Se preenchido,
-                as mensagens serão enviadas para este número em vez do telefone
-                do paciente.
-              </p>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor={`whatsapp-media-${id}`}>Anexar Mídia (imagem, vídeo ou PDF)</Label>
               <Input
                 id={`whatsapp-media-${id}`}
@@ -3566,8 +3533,6 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
                 onChange={async (e) => {
                   const files = Array.from(e.target.files || []);
                   if (files.length === 0) return;
-                  // Supondo que existe uma função global window.uploadMediaToSupabase
-                  // que retorna um array de URLs das mídias enviadas
                   if (window.uploadMediaToSupabase) {
                     const urls = await window.uploadMediaToSupabase(files);
                     handleInputChange("mediaUrls", urls);
@@ -6848,10 +6813,8 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
                         const angle =
                           (Math.PI * 2 * index) / categories.length -
                           Math.PI / 2;
-                        const x =
-                          centerX + (radarRadius + 10) * Math.cos(angle);
-                        const y =
-                          centerY + (radarRadius + 10) * Math.sin(angle);
+                        const x = centerX + (radarRadius + 10) * Math.cos(angle);
+                        const y = centerY + (radarRadius + 10) * Math.sin(angle);
                         return (
                           <text
                             key={index}
