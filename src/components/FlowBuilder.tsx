@@ -3556,29 +3556,47 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
                 do paciente.
               </p>
             </div>
-
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-media-${id}`}>Anexar Mídia (imagem, vídeo ou PDF)</Label>
+              <Input
+                id={`whatsapp-media-${id}`}
+                type="file"
+                multiple
+                accept="image/*,video/*,application/pdf"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  // Supondo que existe uma função global window.uploadMediaToSupabase
+                  // que retorna um array de URLs das mídias enviadas
+                  if (window.uploadMediaToSupabase) {
+                    const urls = await window.uploadMediaToSupabase(files);
+                    handleInputChange("mediaUrls", urls);
+                  }
+                }}
+              />
+              {Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {data.mediaUrls.map((url, idx) => (
+                    <div key={idx} className="text-xs text-green-700 dark:text-green-300 underline break-all">
+                      <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Você pode anexar imagens, vídeos ou PDFs. Os arquivos serão enviados ao salvar.
+              </p>
+            </div>
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
               <div className="flex items-start space-x-2">
                 <MessageSquare className="h-4 w-4 text-amber-500 mt-0.5" />
                 <div className="text-xs text-amber-700 dark:text-amber-300">
                   <p className="font-medium mb-1">Informações importantes:</p>
                   <ul className="space-y-1 text-xs">
-                    <li>
-                      • O número de telefone deve estar no formato E.164 (ex:
-                      +5511999999999)
-                    </li>
-                    <li>
-                      • A mensagem será enviada via WhatsApp usando a Edge
-                      Function do Supabase
-                    </li>
-                    <li>
-                      • O envio só ocorre quando o paciente atinge este nó
-                      durante a execução do fluxo
-                    </li>
-                    <li>
-                      • Certifique-se de que o paciente tem um número de
-                      WhatsApp válido cadastrado
-                    </li>
+                    <li>• O número de telefone do paciente será buscado automaticamente do cadastro.</li>
+                    <li>• A mensagem será enviada via WhatsApp usando a Edge Function do Supabase.</li>
+                    <li>• O envio só ocorre quando o paciente atinge este nó durante a execução do fluxo.</li>
+                    <li>• Certifique-se de que o paciente tem um número de WhatsApp válido cadastrado.</li>
                   </ul>
                 </div>
               </div>
