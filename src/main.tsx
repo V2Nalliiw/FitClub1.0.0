@@ -5,6 +5,16 @@ import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 import { initializeTheme } from "@/hooks/useTheme";
 
+// Import tempo routes for storyboards
+let routes: any[] = [];
+try {
+  if (import.meta.env.VITE_TEMPO) {
+    routes = require("tempo-routes").default || [];
+  }
+} catch (error) {
+  console.warn("Tempo routes not available:", error);
+}
+
 import { TempoDevtools } from "tempo-devtools";
 TempoDevtools.init();
 

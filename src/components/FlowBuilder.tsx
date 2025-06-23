@@ -103,12 +103,14 @@ import {
   Circle,
   CheckSquare,
   Monitor,
+  Clock,
 } from "lucide-react";
 
 // Enhanced Custom Node Components with better connection visualization
 
 const StartNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -132,6 +134,12 @@ const StartNode = ({ data, id, selected }) => {
     const showContinueButtonCheckbox = document.getElementById(
       `start-show-continue-${id}`,
     );
+    const isLinkedFlowCheckbox = document.getElementById(
+      `start-is-linked-flow-${id}`,
+    );
+    const sourceFlowIdInput = document.getElementById(
+      `start-source-flow-id-${id}`,
+    );
 
     if (
       titleInput &&
@@ -142,7 +150,9 @@ const StartNode = ({ data, id, selected }) => {
       enableTimerCheckbox &&
       timerAmountInput &&
       timerUnitSelect &&
-      showContinueButtonCheckbox
+      showContinueButtonCheckbox &&
+      isLinkedFlowCheckbox &&
+      sourceFlowIdInput
     ) {
       updateNodeData({
         label: titleInput.value || "Início",
@@ -154,9 +164,23 @@ const StartNode = ({ data, id, selected }) => {
         timerAmount: parseInt(timerAmountInput.value) || 1,
         timerUnit: timerUnitSelect.value || "hours",
         showContinueButton: showContinueButtonCheckbox.checked || false,
+        isLinkedFlow: isLinkedFlowCheckbox.checked || false,
+        sourceFlowId: sourceFlowIdInput.value || "",
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   const renderMediaPreview = () => {
@@ -261,11 +285,28 @@ const StartNode = ({ data, id, selected }) => {
 
         {renderMediaPreview()}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
         {/* Timer indicator */}
         {data.enableTimer && (
           <div className="mt-3 p-2 bg-emerald-100 dark:bg-emerald-800/30 rounded border border-emerald-200 dark:border-emerald-700">
             <div className="flex items-center text-xs text-emerald-700 dark:text-emerald-300">
-              <Zap className="h-3 w-3 mr-1" />
+              <Clock className="h-3 w-3 mr-1" />
               Timer: {data.timerAmount}{" "}
               {data.timerUnit === "minutes"
                 ? "min"
@@ -282,6 +323,25 @@ const StartNode = ({ data, id, selected }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Linked flow indicator */}
+        {data.isLinkedFlow && data.sourceFlowId && (
+          <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-800/30 rounded border border-purple-200 dark:border-purple-700">
+            <div className="flex items-center text-xs text-purple-700 dark:text-purple-300">
+              <GitBranch className="h-3 w-3 mr-1" />
+              Vinculado ao fluxo: {data.sourceFlowId}
+            </div>
+          </div>
+        )}
+
+        {/* Input Handle for linked flows */}
+        {(data.isLinkedFlow || showConnectionPoints) && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
         )}
 
         <Handle
@@ -339,7 +399,9 @@ const StartNode = ({ data, id, selected }) => {
                   </Label>
                   <Select
                     defaultValue={data.mediaType || "none"}
-                    onValueChange={(value) => {}}
+                    onValueChange={(value) =>
+                      handleInputChange("mediaType", value)
+                    }
                     name={`start-media-type-${id}`}
                   >
                     <SelectTrigger>
@@ -380,7 +442,7 @@ const StartNode = ({ data, id, selected }) => {
                   htmlFor={`start-enable-timer-${id}`}
                   className="flex items-center"
                 >
-                  <Zap className="h-4 w-4 mr-2 text-emerald-500" />
+                  <Clock className="h-4 w-4 mr-2 text-emerald-500" />
                   Habilitar Temporizador Automático
                 </Label>
               </div>
@@ -409,7 +471,12 @@ const StartNode = ({ data, id, selected }) => {
                   >
                     Unidade
                   </Label>
-                  <Select defaultValue={data.timerUnit || "hours"}>
+                  <Select
+                    defaultValue={data.timerUnit || "hours"}
+                    onValueChange={(value) =>
+                      handleInputChange("timerUnit", value)
+                    }
+                  >
                     <SelectTrigger id={`start-timer-unit-${id}`}>
                       <SelectValue />
                     </SelectTrigger>
@@ -427,6 +494,9 @@ const StartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`start-show-continue-${id}`}
                   defaultChecked={data.showContinueButton || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showContinueButton", checked)
+                  }
                 />
                 <Label
                   htmlFor={`start-show-continue-${id}`}
@@ -437,9 +507,43 @@ const StartNode = ({ data, id, selected }) => {
                 </Label>
               </div>
 
+              {/* Linked Flow Configuration */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id={`start-is-linked-flow-${id}`}
+                    defaultChecked={data.isLinkedFlow || false}
+                    onCheckedChange={(checked) =>
+                      handleInputChange("isLinkedFlow", checked)
+                    }
+                  />
+                  <Label
+                    htmlFor={`start-is-linked-flow-${id}`}
+                    className="flex items-center"
+                  >
+                    <GitBranch className="h-4 w-4 mr-2 text-purple-500" />
+                    Este é um fluxo vinculado
+                  </Label>
+                </div>
+
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor={`start-source-flow-id-${id}`}>
+                    ID do Fluxo de Origem
+                  </Label>
+                  <Input
+                    id={`start-source-flow-id-${id}`}
+                    defaultValue={data.sourceFlowId || ""}
+                    placeholder="ID do fluxo de origem"
+                    onChange={(e) =>
+                      handleInputChange("sourceFlowId", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex items-start space-x-2">
-                  <Zap className="h-4 w-4 text-blue-500 mt-0.5" />
+                  <Clock className="h-4 w-4 text-blue-500 mt-0.5" />
                   <div className="text-xs text-blue-700 dark:text-blue-300">
                     <p className="font-medium mb-1">
                       Como funciona o temporizador:
@@ -461,6 +565,10 @@ const StartNode = ({ data, id, selected }) => {
                         • Conecte este nó a um nó "Fim" para marcar o final de
                         uma etapa
                       </li>
+                      <li>
+                        • Marque como "fluxo vinculado" para receber conexões de
+                        outros fluxos
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -481,6 +589,7 @@ const StartNode = ({ data, id, selected }) => {
 
 const QuestionNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
   const [options, setOptions] = useState(
     data.options || ["Opção 1", "Opção 2"],
   );
@@ -545,6 +654,65 @@ const QuestionNode = ({ data, id, selected }) => {
     if (checked) {
       setAllowTextInput(true);
     }
+    // Auto-save
+    updateNodeData({
+      ...data,
+      textInputOnly: checked,
+      allowTextInput: checked ? true : allowTextInput,
+    });
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
+  };
+
+  // Auto-save on state changes
+  const handleQuestionTypeChange = (value) => {
+    setQuestionType(value);
+    updateNodeData({
+      ...data,
+      questionType: value,
+    });
+  };
+
+  const handleUseEmojisChange = (checked) => {
+    setUseEmojis(checked);
+    updateNodeData({
+      ...data,
+      useEmojis: checked,
+    });
+  };
+
+  const handleUseImagesChange = (checked) => {
+    setUseImages(checked);
+    updateNodeData({
+      ...data,
+      useImages: checked,
+    });
+  };
+
+  const handleAllowTextInputChange = (checked) => {
+    setAllowTextInput(checked);
+    updateNodeData({
+      ...data,
+      allowTextInput: checked,
+    });
+  };
+
+  const handleOptionsChange = (newOptions) => {
+    setOptions(newOptions);
+    updateNodeData({
+      ...data,
+      options: newOptions,
+    });
   };
 
   return (
@@ -672,6 +840,32 @@ const QuestionNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         {/* Single output handle for text-input-only questions */}
         {data.textInputOnly && (
           <Handle
@@ -698,6 +892,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 id={`question-title-${id}`}
                 defaultValue={data.label || "Pergunta"}
                 placeholder="Título da pergunta"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -707,12 +902,16 @@ const QuestionNode = ({ data, id, selected }) => {
                 defaultValue={data.question || "Qual é a sua pergunta?"}
                 placeholder="Digite a pergunta aqui"
                 rows={3}
+                onChange={(e) => handleInputChange("question", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Tipo de Resposta</Label>
-              <Select value={questionType} onValueChange={setQuestionType}>
+              <Select
+                value={questionType}
+                onValueChange={handleQuestionTypeChange}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -728,7 +927,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`use-emojis-${id}`}
                   checked={useEmojis}
-                  onCheckedChange={setUseEmojis}
+                  onCheckedChange={handleUseEmojisChange}
                 />
                 <Label
                   htmlFor={`use-emojis-${id}`}
@@ -742,7 +941,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`use-images-${id}`}
                   checked={useImages}
-                  onCheckedChange={setUseImages}
+                  onCheckedChange={handleUseImagesChange}
                 />
                 <Label
                   htmlFor={`use-images-${id}`}
@@ -756,7 +955,7 @@ const QuestionNode = ({ data, id, selected }) => {
                 <Switch
                   id={`allow-text-input-${id}`}
                   checked={allowTextInput}
-                  onCheckedChange={setAllowTextInput}
+                  onCheckedChange={handleAllowTextInputChange}
                   disabled={textInputOnly}
                 />
                 <Label
@@ -790,7 +989,13 @@ const QuestionNode = ({ data, id, selected }) => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={addOption}
+                  onClick={() => {
+                    const newOptions = [
+                      ...options,
+                      `Opção ${options.length + 1}`,
+                    ];
+                    handleOptionsChange(newOptions);
+                  }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar
@@ -801,7 +1006,11 @@ const QuestionNode = ({ data, id, selected }) => {
                   <div key={index} className="flex items-center space-x-2">
                     <Input
                       value={option}
-                      onChange={(e) => updateOption(index, e.target.value)}
+                      onChange={(e) => {
+                        const newOptions = [...options];
+                        newOptions[index] = e.target.value;
+                        handleOptionsChange(newOptions);
+                      }}
                       placeholder={`Opção ${index + 1}`}
                     />
                     {options.length > 2 && (
@@ -809,7 +1018,14 @@ const QuestionNode = ({ data, id, selected }) => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => removeOption(index)}
+                        onClick={() => {
+                          if (options.length > 2) {
+                            const newOptions = options.filter(
+                              (_, i) => i !== index,
+                            );
+                            handleOptionsChange(newOptions);
+                          }
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -833,6 +1049,7 @@ const QuestionNode = ({ data, id, selected }) => {
 
 const MessageNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -852,6 +1069,18 @@ const MessageNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -913,6 +1142,32 @@ const MessageNode = ({ data, id, selected }) => {
           {data.message || "Conteúdo da mensagem"}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         {/* Output Handle */}
         <Handle
           type="source"
@@ -937,6 +1192,7 @@ const MessageNode = ({ data, id, selected }) => {
                 id={`message-title-${id}`}
                 defaultValue={data.label || "Mensagem"}
                 placeholder="Título da mensagem"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -946,6 +1202,7 @@ const MessageNode = ({ data, id, selected }) => {
                 defaultValue={data.message || "Conteúdo da mensagem"}
                 placeholder="Digite o conteúdo da mensagem aqui"
                 rows={5}
+                onChange={(e) => handleInputChange("message", e.target.value)}
               />
             </div>
           </div>
@@ -963,6 +1220,7 @@ const MessageNode = ({ data, id, selected }) => {
 
 const VideoNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -985,6 +1243,18 @@ const VideoNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1052,6 +1322,32 @@ const VideoNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1075,6 +1371,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-title-${id}`}
                 defaultValue={data.label || "Vídeo"}
                 placeholder="Título do nó de vídeo"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1083,6 +1380,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do vídeo para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1091,6 +1389,7 @@ const VideoNode = ({ data, id, selected }) => {
                 id={`video-url-${id}`}
                 defaultValue={data.videoUrl || ""}
                 placeholder="https://youtube.com/watch?v=..."
+                onChange={(e) => handleInputChange("videoUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1100,6 +1399,9 @@ const VideoNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do vídeo (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1117,6 +1419,7 @@ const VideoNode = ({ data, id, selected }) => {
 
 const AudioNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1139,6 +1442,18 @@ const AudioNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1206,6 +1521,32 @@ const AudioNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1229,6 +1570,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-title-${id}`}
                 defaultValue={data.label || "Áudio"}
                 placeholder="Título do nó de áudio"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1237,6 +1579,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do áudio para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1245,6 +1588,7 @@ const AudioNode = ({ data, id, selected }) => {
                 id={`audio-url-${id}`}
                 defaultValue={data.audioUrl || ""}
                 placeholder="https://exemplo.com/audio.mp3"
+                onChange={(e) => handleInputChange("audioUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1254,6 +1598,9 @@ const AudioNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do áudio (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1271,6 +1618,7 @@ const AudioNode = ({ data, id, selected }) => {
 
 const EbookNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1293,6 +1641,18 @@ const EbookNode = ({ data, id, selected }) => {
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
   };
 
   return (
@@ -1360,6 +1720,32 @@ const EbookNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -1383,6 +1769,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-title-${id}`}
                 defaultValue={data.label || "E-book"}
                 placeholder="Título do nó de e-book"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1391,6 +1778,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-name-${id}`}
                 defaultValue={data.title || ""}
                 placeholder="Nome do e-book para o paciente"
+                onChange={(e) => handleInputChange("title", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1399,6 +1787,7 @@ const EbookNode = ({ data, id, selected }) => {
                 id={`ebook-url-${id}`}
                 defaultValue={data.ebookUrl || ""}
                 placeholder="https://exemplo.com/ebook.pdf"
+                onChange={(e) => handleInputChange("ebookUrl", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -1408,6 +1797,9 @@ const EbookNode = ({ data, id, selected }) => {
                 defaultValue={data.description || ""}
                 placeholder="Descrição do e-book (opcional)"
                 rows={3}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -1425,6 +1817,7 @@ const EbookNode = ({ data, id, selected }) => {
 
 const EndNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -1441,12 +1834,20 @@ const EndNode = ({ data, id, selected }) => {
     const continueButtonTextInput = document.getElementById(
       `end-continue-text-${id}`,
     );
+    const connectToFlowCheckbox = document.getElementById(
+      `end-connect-to-flow-${id}`,
+    );
+    const targetFlowIdInput = document.getElementById(
+      `end-target-flow-id-${id}`,
+    );
 
     if (
       titleInput &&
       messageInput &&
       showContinueButtonCheckbox &&
-      continueButtonTextInput
+      continueButtonTextInput &&
+      connectToFlowCheckbox &&
+      targetFlowIdInput
     ) {
       updateNodeData({
         label: (titleInput as HTMLInputElement).value || "Fim",
@@ -1456,9 +1857,16 @@ const EndNode = ({ data, id, selected }) => {
         continueButtonText:
           (continueButtonTextInput as HTMLInputElement).value ||
           "Continuar Fluxo",
+        connectToFlow:
+          (connectToFlowCheckbox as HTMLInputElement).checked || false,
+        targetFlowId: (targetFlowIdInput as HTMLInputElement).value || "",
       });
     }
     setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
   };
 
   return (
@@ -1519,6 +1927,23 @@ const EndNode = ({ data, id, selected }) => {
           {data.message || "Fim do fluxo"}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
         {/* Continue button indicator */}
         {data.showContinueButton && (
           <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-800/30 rounded border border-blue-200 dark:border-blue-700">
@@ -1529,12 +1954,22 @@ const EndNode = ({ data, id, selected }) => {
           </div>
         )}
 
+        {/* Flow connection indicator */}
+        {data.connectToFlow && data.targetFlowId && (
+          <div className="mt-3 p-2 bg-purple-100 dark:bg-purple-800/30 rounded border border-purple-200 dark:border-purple-700">
+            <div className="flex items-center text-xs text-purple-700 dark:text-purple-300">
+              <GitBranch className="h-3 w-3 mr-1" />
+              Conectado ao fluxo: {data.targetFlowId}
+            </div>
+          </div>
+        )}
+
         {/* Output Handle for continuing flow */}
-        {data.showContinueButton && (
+        {(data.showContinueButton || showConnectionPoints) && (
           <Handle
             type="source"
             position={Position.Right}
-            className="w-3 h-3 bg-blue-500 border-2 border-white"
+            className={`w-3 h-3 ${data.showContinueButton ? "bg-blue-500" : "bg-purple-500"} border-2 border-white`}
           />
         )}
       </div>
@@ -1573,6 +2008,9 @@ const EndNode = ({ data, id, selected }) => {
                 <Switch
                   id={`end-show-continue-${id}`}
                   defaultChecked={data.showContinueButton || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showContinueButton", checked)
+                  }
                 />
                 <Label
                   htmlFor={`end-show-continue-${id}`}
@@ -1591,6 +2029,41 @@ const EndNode = ({ data, id, selected }) => {
                   id={`end-continue-text-${id}`}
                   defaultValue={data.continueButtonText || "Continuar Fluxo"}
                   placeholder="Continuar Fluxo"
+                  onChange={(e) =>
+                    handleInputChange("continueButtonText", e.target.value)
+                  }
+                />
+              </div>
+
+              {/* Connect to another flow */}
+              <div className="flex items-center space-x-2 mt-4">
+                <Switch
+                  id={`end-connect-to-flow-${id}`}
+                  defaultChecked={data.connectToFlow || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("connectToFlow", checked)
+                  }
+                />
+                <Label
+                  htmlFor={`end-connect-to-flow-${id}`}
+                  className="flex items-center"
+                >
+                  <GitBranch className="h-4 w-4 mr-2 text-purple-500" />
+                  Conectar a outro fluxo
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`end-target-flow-id-${id}`}>
+                  ID do Fluxo Alvo
+                </Label>
+                <Input
+                  id={`end-target-flow-id-${id}`}
+                  defaultValue={data.targetFlowId || ""}
+                  placeholder="ID do fluxo para conectar"
+                  onChange={(e) =>
+                    handleInputChange("targetFlowId", e.target.value)
+                  }
                 />
               </div>
 
@@ -1611,6 +2084,9 @@ const EndNode = ({ data, id, selected }) => {
                       <li>
                         • Conecte a saída deste nó a um novo nó "Início" para
                         criar etapas sequenciais
+                      </li>
+                      <li>
+                        • Conecte a outro fluxo para criar fluxos encadeados
                       </li>
                     </ul>
                   </div>
@@ -1633,6 +2109,7 @@ const EndNode = ({ data, id, selected }) => {
 // Chart Node for data visualization with enhanced interactivity
 const ChartNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [chartData, setChartData] = useState({
@@ -2575,6 +3052,32 @@ const ChartNode = ({ data, id, selected }) => {
           {renderChartPreview()}
         </div>
 
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
         <Handle
           type="source"
           position={Position.Right}
@@ -2598,6 +3101,7 @@ const ChartNode = ({ data, id, selected }) => {
                 id={`chart-title-${id}`}
                 defaultValue={data.label || "Gráfico"}
                 placeholder="Título do gráfico"
+                onChange={(e) => handleInputChange("label", e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -2609,12 +3113,18 @@ const ChartNode = ({ data, id, selected }) => {
                 }
                 placeholder="Descrição do gráfico"
                 rows={2}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`chart-type-${id}`}>Tipo de Visualização</Label>
-              <Select defaultValue={data.chartType || "progress"}>
+              <Select
+                defaultValue={data.chartType || "progress"}
+                onValueChange={(value) => handleInputChange("chartType", value)}
+              >
                 <SelectTrigger id={`chart-type-${id}`}>
                   <SelectValue />
                 </SelectTrigger>
@@ -2640,6 +3150,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.currentPercentage || 65}
                   placeholder="65"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "currentPercentage",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -2653,6 +3169,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.idealPercentage || 85}
                   placeholder="85"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "idealPercentage",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
             </div>
@@ -2670,7 +3192,12 @@ const ChartNode = ({ data, id, selected }) => {
 
               <div className="space-y-2">
                 <Label htmlFor={`chart-quality-${id}`}>Grau de Qualidade</Label>
-                <Select defaultValue={data.qualityLevel || "good"}>
+                <Select
+                  defaultValue={data.qualityLevel || "good"}
+                  onValueChange={(value) =>
+                    handleInputChange("qualityLevel", value)
+                  }
+                >
                   <SelectTrigger id={`chart-quality-${id}`}>
                     <SelectValue />
                   </SelectTrigger>
@@ -2687,6 +3214,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-patient-${id}`}
                   defaultChecked={data.showPatientPosition || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showPatientPosition", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-patient-${id}`}>
                   Mostrar Posição do Paciente
@@ -2704,6 +3234,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.patientPosition || 50}
                   placeholder="50"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "patientPosition",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
 
@@ -2711,6 +3247,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-trend-${id}`}
                   defaultChecked={data.showTrendIndicator || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showTrendIndicator", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-trend-${id}`}>
                   Mostrar Indicador de Tendência
@@ -2721,6 +3260,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-show-comparison-${id}`}
                   defaultChecked={data.showComparison || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("showComparison", checked)
+                  }
                 />
                 <Label htmlFor={`chart-show-comparison-${id}`}>
                   Mostrar Comparação com Valor Anterior
@@ -2738,6 +3280,12 @@ const ChartNode = ({ data, id, selected }) => {
                   max="100"
                   defaultValue={data.comparisonValue || 40}
                   placeholder="40"
+                  onChange={(e) =>
+                    handleInputChange(
+                      "comparisonValue",
+                      parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
               </div>
 
@@ -2745,6 +3293,9 @@ const ChartNode = ({ data, id, selected }) => {
                 <Switch
                   id={`chart-use-random-data-${id}`}
                   defaultChecked={data.useRandomData || false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("useRandomData", checked)
+                  }
                 />
                 <Label htmlFor={`chart-use-random-data-${id}`}>
                   Usar Dados Aleatórios (Apenas para Demonstração)
@@ -2787,6 +3338,433 @@ const ChartNode = ({ data, id, selected }) => {
   );
 };
 
+// WhatsApp Notification Node Component
+const WhatsAppNotificationNode = ({ data, id, selected }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showConnectionPoints, setShowConnectionPoints] = useState(false);
+  const [sendingStatus, setSendingStatus] = useState("idle"); // idle, sending, success, error
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const updateNodeData = (newData) => {
+    if (window.updateNodeData) {
+      window.updateNodeData(id, newData);
+    }
+  };
+
+  const saveChanges = () => {
+    const titleInput = document.getElementById(`whatsapp-title-${id}`);
+    const messageInput = document.getElementById(`whatsapp-message-${id}`);
+    const phoneFieldInput = document.getElementById(
+      `whatsapp-phone-field-${id}`,
+    );
+    const testPhoneInput = document.getElementById(`whatsapp-test-phone-${id}`);
+
+    if (titleInput && messageInput && phoneFieldInput) {
+      updateNodeData({
+        label: (titleInput as HTMLInputElement).value || "Notificação WhatsApp",
+        message:
+          (messageInput as HTMLTextAreaElement).value ||
+          "Olá! Esta é uma mensagem do seu especialista.",
+        phoneField: (phoneFieldInput as HTMLInputElement).value || "phone",
+        testPhone: (testPhoneInput as HTMLInputElement).value || "",
+      });
+    }
+    setShowEditModal(false);
+  };
+
+  const toggleConnectionPoints = () => {
+    setShowConnectionPoints(!showConnectionPoints);
+  };
+
+  // Auto-save on input change
+  const handleInputChange = (field, value) => {
+    updateNodeData({
+      ...data,
+      [field]: value,
+    });
+  };
+
+  // Function to send WhatsApp notification
+  const sendWhatsAppNotification = async (patientData) => {
+    try {
+      setSendingStatus("sending");
+      setErrorMessage("");
+
+      // Get the phone number from patient data or use test phone if available
+      const phoneField = data.phoneField || "phone";
+      const phoneNumber =
+        data.testPhone || (patientData && patientData[phoneField]);
+
+      if (!phoneNumber) {
+        throw new Error("Número de telefone não disponível");
+      }
+
+      // Prepare the payload for the Edge Function
+      const payload = {
+        patient_id: patientData.id,
+        message:
+          data.message || "Olá! Esta é uma mensagem do seu especialista.",
+        mediaUrls: data.mediaUrls || [],
+      };
+
+      // Call the Supabase Edge Function to send the WhatsApp message
+      const { data: responseData, error } = await supabase.functions.invoke(
+        "supabase-functions-send_whatsapp_notification",
+        {
+          body: payload,
+        },
+      );
+
+      if (error) {
+        console.error("Erro ao enviar notificação WhatsApp:", error);
+        setSendingStatus("error");
+        setErrorMessage(error.message || "Erro ao enviar mensagem");
+        return false;
+      }
+
+      console.log("Notificação WhatsApp enviada com sucesso:", responseData);
+      setSendingStatus("success");
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setSendingStatus("idle");
+      }, 3000);
+
+      return true;
+    } catch (error) {
+      console.error("Exceção ao enviar notificação WhatsApp:", error);
+      setSendingStatus("error");
+      setErrorMessage(error.message || "Erro ao enviar mensagem");
+
+      // Reset error status after 5 seconds
+      setTimeout(() => {
+        setSendingStatus("idle");
+        setErrorMessage("");
+      }, 5000);
+
+      return false;
+    }
+  };
+
+  // Function to test WhatsApp notification
+  const testWhatsAppNotification = async () => {
+    const testPhone = data.testPhone;
+    if (!testPhone) {
+      alert(
+        "Por favor, configure um número de telefone de teste no modal de edição.",
+      );
+      return;
+    }
+
+    const mockPatientData = {
+      id: "test-patient-id",
+      [data.phoneField || "phone"]: testPhone,
+    };
+
+    await sendWhatsAppNotification(mockPatientData);
+  };
+
+  return (
+    <>
+      <div
+        className={`bg-green-50 dark:bg-green-900/30 rounded-lg shadow-lg p-4 border-2 min-w-[250px] ${
+          selected
+            ? "border-green-500 shadow-green-200"
+            : "border-green-200 dark:border-green-800"
+        }`}
+      >
+        {/* Input Handle */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="w-3 h-3 bg-green-500 border-2 border-white"
+        />
+
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center">
+            <MessageSquare className="h-4 w-4 mr-2 text-green-500" />
+            {data.label || "Notificação WhatsApp"}
+          </h3>
+          <div className="flex space-x-1">
+            <button
+              className="p-1 hover:bg-green-100 dark:hover:bg-green-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEditModal(true);
+              }}
+              title="Editar"
+            >
+              <Edit className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <button
+              className="p-1 hover:bg-green-100 dark:hover:bg-green-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.duplicateNode) window.duplicateNode(id);
+              }}
+              title="Duplicar"
+            >
+              <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <button
+              className="p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.deleteNode) window.deleteNode(id);
+              }}
+              title="Excluir"
+            >
+              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          {data.message || "Olá! Esta é uma mensagem do seu especialista."}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-green-200 dark:border-green-800 mb-3">
+          <div className="flex items-center text-xs text-green-700 dark:text-green-300">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Mensagem será enviada via WhatsApp
+          </div>
+          {data.phoneField && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <User className="h-3 w-3 mr-1" />
+              Campo de telefone: {data.phoneField}
+            </div>
+          )}
+          {Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0 && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <Image className="h-3 w-3 mr-1" />
+              {data.mediaUrls.length}{" "}
+              {data.mediaUrls.length === 1
+                ? "mídia anexada"
+                : "mídias anexadas"}
+            </div>
+          )}
+
+          {/* Status indicator */}
+          {sendingStatus !== "idle" && (
+            <div
+              className={`flex items-center text-xs mt-2 ${
+                sendingStatus === "sending"
+                  ? "text-amber-500"
+                  : sendingStatus === "success"
+                    ? "text-green-500"
+                    : "text-red-500"
+              }`}
+            >
+              {sendingStatus === "sending" && (
+                <>
+                  <div className="animate-spin h-3 w-3 border-2 border-amber-500 border-t-transparent rounded-full mr-1"></div>
+                  Enviando mensagem...
+                </>
+              )}
+              {sendingStatus === "success" && (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Mensagem enviada com sucesso!
+                </>
+              )}
+              {sendingStatus === "error" && (
+                <>
+                  <X className="h-3 w-3 mr-1" />
+                  Erro: {errorMessage || "Falha ao enviar mensagem"}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Test button */}
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                testWhatsAppNotification();
+              }}
+              disabled={sendingStatus === "sending"}
+            >
+              Testar Envio
+            </Button>
+          </div>
+        </div>
+
+        {/* Connection button */}
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleConnectionPoints}
+            className="flex items-center text-xs"
+          >
+            {showConnectionPoints ? (
+              <Unlink className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {showConnectionPoints ? "Ocultar conexões" : "Mostrar conexões"}
+          </Button>
+        </div>
+
+        {/* Input Handle for connections */}
+        {showConnectionPoints && (
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-purple-500 border-2 border-white"
+          />
+        )}
+
+        {/* Output Handle */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="w-3 h-3 bg-green-500 border-2 border-white"
+        />
+      </div>
+
+      {/* Edit Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Notificação WhatsApp</DialogTitle>
+            <DialogDescription>
+              Configure a mensagem que será enviada via WhatsApp para o
+              paciente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-title-${id}`}>Título</Label>
+              <Input
+                id={`whatsapp-title-${id}`}
+                defaultValue={data.label || "Notificação WhatsApp"}
+                placeholder="Título da notificação"
+                onChange={(e) => handleInputChange("label", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-message-${id}`}>
+                Mensagem WhatsApp
+              </Label>
+              <Textarea
+                id={`whatsapp-message-${id}`}
+                defaultValue={
+                  data.message ||
+                  "Olá! Esta é uma mensagem do seu especialista."
+                }
+                placeholder="Digite a mensagem que será enviada via WhatsApp"
+                rows={5}
+                onChange={(e) => handleInputChange("message", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-phone-field-${id}`}>
+                Campo de Telefone
+              </Label>
+              <Input
+                id={`whatsapp-phone-field-${id}`}
+                defaultValue={data.phoneField || "phone"}
+                placeholder="Nome do campo de telefone no cadastro do paciente"
+                onChange={(e) =>
+                  handleInputChange("phoneField", e.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-test-phone-${id}`}>
+                Telefone para Teste (E.164)
+              </Label>
+              <Input
+                id={`whatsapp-test-phone-${id}`}
+                defaultValue={data.testPhone || ""}
+                placeholder="Ex: +5511999999999"
+                onChange={(e) => handleInputChange("testPhone", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Formato E.164 (com código do país). Ex: +5511999999999
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-media-${id}`}>
+                Anexar Mídia (imagem, vídeo ou PDF)
+              </Label>
+              <Input
+                id={`whatsapp-media-${id}`}
+                type="file"
+                multiple
+                accept="image/*,video/*,application/pdf"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  if (window.uploadMediaToSupabase) {
+                    const urls = await window.uploadMediaToSupabase(files);
+                    handleInputChange("mediaUrls", urls);
+                  }
+                }}
+              />
+              {Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {data.mediaUrls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="text-xs text-green-700 dark:text-green-300 underline break-all"
+                    >
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Você pode anexar imagens, vídeos ou PDFs. Os arquivos serão
+                enviados ao salvar.
+              </p>
+            </div>
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start space-x-2">
+                <MessageSquare className="h-4 w-4 text-amber-500 mt-0.5" />
+                <div className="text-xs text-amber-700 dark:text-amber-300">
+                  <p className="font-medium mb-1">Informações importantes:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      • O número de telefone do paciente será buscado
+                      automaticamente do cadastro.
+                    </li>
+                    <li>
+                      • A mensagem será enviada via WhatsApp usando a Edge
+                      Function do Supabase.
+                    </li>
+                    <li>
+                      • O envio só ocorre quando o paciente atinge este nó
+                      durante a execução do fluxo.
+                    </li>
+                    <li>
+                      • Certifique-se de que o paciente tem um número de
+                      WhatsApp válido cadastrado.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={saveChanges}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 // Node types configuration
 const nodeTypes = {
   startNode: StartNode,
@@ -2797,6 +3775,7 @@ const nodeTypes = {
   ebookNode: EbookNode,
   endNode: EndNode,
   chartNode: ChartNode,
+  whatsAppNode: WhatsAppNotificationNode,
 };
 
 // Main FlowBuilder Component
@@ -2902,6 +3881,48 @@ export const FlowBuilder = () => {
     };
   }, [nodes, setNodes, setEdges]);
 
+  // Function to execute WhatsApp notification during flow execution
+  const executeWhatsAppNotification = async (nodeData, patientData) => {
+    try {
+      // Get the phone number from patient data or use test phone if available
+      const phoneField = nodeData.phoneField || "phone";
+      const phoneNumber =
+        nodeData.testPhone || (patientData && patientData[phoneField]);
+
+      if (!phoneNumber) {
+        console.error("No phone number available for WhatsApp notification");
+        return false;
+      }
+
+      // Prepare the payload for the Edge Function
+      const payload = {
+        patient_id: patientData.id,
+        message:
+          nodeData.message || "Olá! Esta é uma mensagem do seu especialista.",
+        mediaUrls: nodeData.mediaUrls || [],
+      };
+
+      // Call the Supabase Edge Function to send the WhatsApp message
+      const { data, error } = await supabase.functions.invoke(
+        "supabase-functions-send_whatsapp_notification",
+        {
+          body: payload,
+        },
+      );
+
+      if (error) {
+        console.error("Error sending WhatsApp notification:", error);
+        return false;
+      }
+
+      console.log("WhatsApp notification sent successfully:", data);
+      return true;
+    } catch (error) {
+      console.error("Exception sending WhatsApp notification:", error);
+      return false;
+    }
+  };
+
   // Handle connections between nodes
   const onConnect = useCallback(
     (params) => {
@@ -2926,6 +3947,30 @@ export const FlowBuilder = () => {
         if (existingConnections.length >= 1) {
           alert("Perguntas de resposta digitada só podem ter uma conexão.");
           return;
+        }
+      }
+
+      // Check for flow connections (end node to start node)
+      if (
+        sourceNode &&
+        targetNode &&
+        sourceNode.type === "endNode" &&
+        targetNode.type === "startNode"
+      ) {
+        // Update the end node with connection information
+        if (window.updateNodeData) {
+          window.updateNodeData(sourceNode.id, {
+            ...sourceNode.data,
+            connectToFlow: true,
+            targetFlowId: targetNode.id.split("-")[1], // Extract flow ID from node ID
+          });
+
+          // Update the start node with connection information
+          window.updateNodeData(targetNode.id, {
+            ...targetNode.data,
+            isLinkedFlow: true,
+            sourceFlowId: sourceNode.id.split("-")[1], // Extract flow ID from node ID
+          });
         }
       }
 
@@ -2992,6 +4037,10 @@ export const FlowBuilder = () => {
             edgeColor = "#0ea5e9"; // Sky
             edgeLabel = "Após gráfico";
             break;
+          case "whatsAppNode":
+            edgeColor = "#10b981"; // Green
+            edgeLabel = "Após envio";
+            break;
           default:
             edgeColor = "#6b7280"; // Gray
             edgeLabel = "Próximo";
@@ -3057,6 +4106,31 @@ export const FlowBuilder = () => {
   const onNodeClick = useCallback((event, node) => {
     event.stopPropagation();
     setSelectedNode(node);
+
+    // For testing WhatsApp node in design mode
+    if (node.type === "whatsAppNode" && event.altKey) {
+      const mockPatientData = {
+        id: "test-patient-id",
+        phone: prompt(
+          "Enter a phone number for testing (E.164 format, e.g. +5511999999999):",
+          "+5511999999999",
+        ),
+      };
+
+      if (mockPatientData.phone) {
+        executeWhatsAppNotification(node.data, mockPatientData).then(
+          (success) => {
+            if (success) {
+              alert("WhatsApp test message sent successfully!");
+            } else {
+              alert(
+                "Failed to send WhatsApp test message. Check console for details.",
+              );
+            }
+          },
+        );
+      }
+    }
   }, []);
 
   // Handle node drag end to prevent stuck nodes
@@ -3089,6 +4163,7 @@ export const FlowBuilder = () => {
         alert(
           "Já existe um nó de início no fluxo. Deve haver apenas um nó de início.",
         );
+        setShowAddNodeDialog(false);
         return;
       }
     }
@@ -3117,6 +4192,8 @@ export const FlowBuilder = () => {
           timerAmount: 1,
           timerUnit: "hours",
           showContinueButton: false,
+          isLinkedFlow: false,
+          sourceFlowId: "",
         };
         break;
       case "question":
@@ -3164,6 +4241,8 @@ export const FlowBuilder = () => {
           message: "Fim do fluxo",
           showContinueButton: false,
           continueButtonText: "Continuar Fluxo",
+          connectToFlow: false,
+          targetFlowId: "",
         };
         break;
       case "chart":
@@ -3177,6 +4256,14 @@ export const FlowBuilder = () => {
           showQualityInteraction: true,
           patientPosition: 50,
           showPatientPosition: true,
+        };
+        break;
+      case "whatsApp":
+        newNode.data = {
+          label: "Notificação WhatsApp",
+          message: "Olá! Esta é uma mensagem do seu especialista.",
+          phoneField: "phone",
+          testPhone: "",
         };
         break;
       default:
@@ -3263,11 +4350,20 @@ export const FlowBuilder = () => {
   const [flowAssignments, setFlowAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [realPatients, setRealPatients] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
 
   // Load assignments when dialog opens
   useEffect(() => {
     if (showAssignmentsDialog) {
       loadFlowAssignments();
+    }
+  }, [showAssignmentsDialog]);
+
+  // Load real patients when assignment dialog opens
+  useEffect(() => {
+    if (showAssignmentsDialog) {
+      loadRealPatients();
     }
   }, [showAssignmentsDialog]);
 
@@ -3542,6 +4638,43 @@ export const FlowBuilder = () => {
     }
   };
 
+  // Function to load real patients from Supabase
+  const loadRealPatients = async () => {
+    try {
+      setLoadingPatients(true);
+      setSaveError(null);
+
+      // Get current user for RLS compliance
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Você precisa estar logado para carregar pacientes.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, full_name, email, role")
+        .eq("role", "patient")
+        .order("full_name", { ascending: true });
+
+      if (error) {
+        console.error("Error loading patients:", error);
+        alert(`Erro ao carregar pacientes: ${error.message}`);
+        setSaveError(error);
+      } else {
+        setRealPatients(data || []);
+      }
+    } catch (error) {
+      console.error("Exception loading patients:", error);
+      alert(`Erro inesperado ao carregar pacientes: ${error.message}`);
+      setSaveError(error);
+    } finally {
+      setLoadingPatients(false);
+    }
+  };
+
   // Function to assign flow to patients
   const assignFlowToPatients = async (formData) => {
     try {
@@ -3608,10 +4741,10 @@ export const FlowBuilder = () => {
         return;
       }
 
-      // Now create assignments for each selected patient
-      const assignments = selectedPatients.map((patientIndex) => ({
+      // Now create assignments for each selected patient using real patient IDs
+      const assignments = selectedPatients.map((patientId) => ({
         flow_id: flowId,
-        patient_id: `patient-${patientIndex + 1}`, // Mock patient IDs
+        patient_id: patientId, // Real patient IDs from database
         start_date: startDate,
         frequency: frequency,
         repetitions: repetitions,
@@ -3769,9 +4902,19 @@ export const FlowBuilder = () => {
     }
 
     // Check for unreachable nodes (nodes that can't be reached from start)
-    if (startNodes.length === 1) {
+    const mainStartNodes = startNodes.filter((node) => !node.data.isLinkedFlow);
+    const linkedStartNodes = startNodes.filter(
+      (node) => node.data.isLinkedFlow,
+    );
+
+    if (mainStartNodes.length === 1) {
       const reachableNodes = new Set();
-      const queue = [startNodes[0].id];
+      const queue = [mainStartNodes[0].id];
+
+      // Add all linked start nodes to the queue as well
+      linkedStartNodes.forEach((node) => {
+        queue.push(node.id);
+      });
 
       while (queue.length > 0) {
         const currentId = queue.shift();
@@ -3960,9 +5103,7 @@ export const FlowBuilder = () => {
                         document.querySelectorAll(
                           'input[type="checkbox"]:checked',
                         ),
-                      ).map((checkbox) =>
-                        parseInt(checkbox.id.replace("patient-", "")),
-                      ),
+                      ).map((checkbox) => (checkbox as HTMLInputElement).value),
                       startDate:
                         (
                           document.querySelector(
@@ -4033,7 +5174,6 @@ export const FlowBuilder = () => {
             title="Ver Atribuições"
           >
             <ListChecks className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Atribuições</span>
           </Button>
           <Button
             variant="outline"
@@ -4042,7 +5182,6 @@ export const FlowBuilder = () => {
             title="Visualizar"
           >
             <Monitor className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Visualizar</span>
           </Button>
         </div>
       </div>
@@ -4258,6 +5397,18 @@ export const FlowBuilder = () => {
                   <Flag className="h-4 w-4" />
                   {!isToolbarCollapsed && <span className="ml-2">Fim</span>}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addNode("whatsApp")}
+                  title="WhatsApp"
+                  className={`${isToolbarCollapsed ? "justify-center p-2" : "justify-start text-xs sm:text-sm"}`}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {!isToolbarCollapsed && (
+                    <span className="ml-2">WhatsApp</span>
+                  )}
+                </Button>
                 {!isToolbarCollapsed && (
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2 col-span-2 sm:col-span-1" />
                 )}
@@ -4380,6 +5531,18 @@ export const FlowBuilder = () => {
                   <Flag className="h-6 w-6 text-gray-500" />
                 </div>
                 <CardTitle className="text-lg">Fim</CardTitle>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => addNode("whatsApp")}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                  <MessageSquare className="h-6 w-6 text-green-500" />
+                </div>
+                <CardTitle className="text-lg">WhatsApp</CardTitle>
               </CardContent>
             </Card>
           </div>
@@ -4717,7 +5880,8 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
       currentNode.type === "audioNode" ||
       currentNode.type === "ebookNode" ||
       currentNode.type === "endNode" ||
-      currentNode.type === "chartNode"
+      currentNode.type === "chartNode" ||
+      currentNode.type === "whatsAppNode"
     ) {
       setCanProceed(true);
       return;
@@ -4769,11 +5933,29 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
   const currentNode = nodes[currentStep] || nodes[0];
   const isLastStep = currentStep >= nodes.length - 1;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canProceed) return;
 
     const currentNode = nodes[currentStep];
     let nextNodeId = null;
+
+    // Execute WhatsApp notification if the current node is a WhatsApp node
+    if (currentNode.type === "whatsAppNode") {
+      // In a real implementation, this would use actual patient data
+      // For the preview, we'll just simulate the execution
+      console.log("Simulating WhatsApp notification in preview mode");
+
+      // In real execution mode, this would call executeWhatsAppNotification
+      // Get the node component instance to update its state
+      const nodeInstance = document.querySelector(
+        `[data-id="${currentNode.id}"]`,
+      );
+      if (nodeInstance && nodeInstance.__reactFiber$) {
+        // This is a simplified approach - in a real implementation, you would
+        // use a proper state management solution or refs to access the component
+        console.log("Would send WhatsApp notification to patient");
+      }
+    }
 
     // Determine next node based on current node type and user choices
     if (currentNode.type === "questionNode") {

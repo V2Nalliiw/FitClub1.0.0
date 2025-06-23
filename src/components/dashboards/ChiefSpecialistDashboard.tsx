@@ -184,6 +184,7 @@ const ChiefSpecialistDashboard = () => {
     name: "",
     email: "",
     phone: "",
+    whatsapp: "",
     dateOfBirth: "",
     gender: "",
     assignedSpecialist: "",
@@ -297,7 +298,8 @@ const ChiefSpecialistDashboard = () => {
             id,
             name,
             email,
-            avatar_url
+            avatar_url,
+            phone
           )
         `,
         )
@@ -473,7 +475,7 @@ const ChiefSpecialistDashboard = () => {
         ).length || 0;
 
       const monthlyRevenue = totalPatients * 150; // This is still an estimate
-      
+
       // Get the total number of appointments for the clinic
       const clinicAppointments = appointments?.length || 0;
 
@@ -1184,9 +1186,7 @@ const ChiefSpecialistDashboard = () => {
             Voltar
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              FlowBuilder
-            </h1>
+            <h1 className="text-2xl font-bold text-foreground">FlowBuilder</h1>
             <p className="text-muted-foreground">
               Crie fluxos interativos para seus pacientes
             </p>
@@ -1646,6 +1646,14 @@ const ChiefSpecialistDashboard = () => {
                             <div className="space-y-2">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">
+                                  WhatsApp:
+                                </span>
+                                <span>
+                                  {patient.whatsapp_number || "Não informado"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
                                   Gênero:
                                 </span>
                                 <span>{patient.gender || "Não informado"}</span>
@@ -1691,6 +1699,7 @@ const ChiefSpecialistDashboard = () => {
                                     name: patient.user_profiles?.name || "",
                                     email: patient.user_profiles?.email || "",
                                     phone: patient.user_profiles?.phone || "",
+                                    whatsapp: patient.whatsapp_number || "",
                                     dateOfBirth: patient.date_of_birth || "",
                                     gender: patient.gender || "",
                                     assignedSpecialist:
@@ -2102,8 +2111,11 @@ const ChiefSpecialistDashboard = () => {
                                       category: tip.category,
                                       description: tip.description || "",
                                       image_url: tip.image_url || "",
-                                      duration_minutes: tip.duration_minutes || 0,
-                                      steps: tip.steps || [{ description: "", duration: 0 }],
+                                      duration_minutes:
+                                        tip.duration_minutes || 0,
+                                      steps: tip.steps || [
+                                        { description: "", duration: 0 },
+                                      ],
                                     });
                                     setIsEditTipModalOpen(true);
                                   }}
@@ -2889,8 +2901,8 @@ const ChiefSpecialistDashboard = () => {
         </DialogContent>
       </Dialog>
 
-            {/* Create Tip Modal */}
-            <Dialog
+      {/* Create Tip Modal */}
+      <Dialog
         open={isCreateTipModalOpen}
         onOpenChange={setIsCreateTipModalOpen}
       >
@@ -2979,44 +2991,67 @@ const ChiefSpecialistDashboard = () => {
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="tip-duration">Duração Total (minutos)</Label>
-                <Input
-                  id="tip-duration"
-                  type="number"
-                  placeholder="Ex: 10"
-                  value={newTip.duration_minutes}
-                  onChange={(e) =>
-                    setNewTip({ ...newTip, duration_minutes: parseInt(e.target.value, 10) || 0 })
-                  }
-                />
-              </div>
+              <Label htmlFor="tip-duration">Duração Total (minutos)</Label>
+              <Input
+                id="tip-duration"
+                type="number"
+                placeholder="Ex: 10"
+                value={newTip.duration_minutes}
+                onChange={(e) =>
+                  setNewTip({
+                    ...newTip,
+                    duration_minutes: parseInt(e.target.value, 10) || 0,
+                  })
+                }
+              />
+            </div>
 
             {/* Steps Section */}
             <div className="space-y-4">
-              <Label className="text-base font-medium">Passos para Completar</Label>
+              <Label className="text-base font-medium">
+                Passos para Completar
+              </Label>
               {newTip.steps.map((step, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                   <span className="text-sm font-bold text-primary">{index + 1}</span>
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-2 border rounded-md bg-muted/50"
+                >
+                  <span className="text-sm font-bold text-primary">
+                    {index + 1}
+                  </span>
                   <div className="flex-grow grid grid-cols-3 gap-2">
                     <Input
                       placeholder={`Descrição do passo ${index + 1}`}
                       value={step.description}
-                      onChange={(e) => handleStepChange(index, "description", e.target.value)}
+                      onChange={(e) =>
+                        handleStepChange(index, "description", e.target.value)
+                      }
                       className="col-span-2"
                     />
                     <Input
                       type="number"
                       placeholder="min"
                       value={step.duration}
-                      onChange={(e) => handleStepChange(index, "duration", e.target.value)}
+                      onChange={(e) =>
+                        handleStepChange(index, "duration", e.target.value)
+                      }
                     />
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => removeStep(index)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeStep(index)}
+                  >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={addStep} className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addStep}
+                className="mt-2"
+              >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Adicionar Passo
               </Button>
@@ -3032,7 +3067,11 @@ const ChiefSpecialistDashboard = () => {
             <Button
               onClick={async () => {
                 try {
-                  if (!newTip.title || !newTip.category || !newTip.description) {
+                  if (
+                    !newTip.title ||
+                    !newTip.category ||
+                    !newTip.description
+                  ) {
                     alert("Por favor, preencha Título, Categoria e Descrição.");
                     return;
                   }
@@ -3048,7 +3087,9 @@ const ChiefSpecialistDashboard = () => {
                     clinic_id: user?.clinicId,
                   };
 
-                  const { error } = await supabase.from("tips").insert(newTipData);
+                  const { error } = await supabase
+                    .from("tips")
+                    .insert(newTipData);
 
                   if (error) {
                     console.error("Error creating tip:", error);
@@ -3057,7 +3098,8 @@ const ChiefSpecialistDashboard = () => {
                   }
 
                   alert("Dica criada com sucesso!");
-                  setNewTip({ // Resetar para o novo estado inicial
+                  setNewTip({
+                    // Resetar para o novo estado inicial
                     title: "",
                     category: "",
                     description: "",
@@ -3518,7 +3560,9 @@ const ChiefSpecialistDashboard = () => {
 
             {/* Steps Section */}
             <div className="space-y-4">
-              <Label className="text-base font-medium">Passos para Completar</Label>
+              <Label className="text-base font-medium">
+                Passos para Completar
+              </Label>
               {newTip.steps.map((step, index) => (
                 <div
                   key={index}
@@ -3947,6 +3991,14 @@ const ChiefSpecialistDashboard = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">
+                    WhatsApp
+                  </Label>
+                  <p className="text-sm">
+                    {selectedPatient.whatsapp_number || "Não informado"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
                     Gênero
                   </Label>
                   <p className="text-sm">
@@ -4054,6 +4106,33 @@ const ChiefSpecialistDashboard = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-patient-whatsapp">WhatsApp *</Label>
+                <Input
+                  id="edit-patient-whatsapp"
+                  placeholder="+5511999999999"
+                  value={editPatientData.whatsapp}
+                  onChange={(e) => {
+                    // Auto-format WhatsApp number
+                    let value = e.target.value.replace(/\D/g, "");
+                    if (value.length > 0 && !value.startsWith("55")) {
+                      if (value.length >= 11) {
+                        value = "55" + value;
+                      }
+                    }
+                    if (value.length > 13) {
+                      value = value.slice(0, 13);
+                    }
+                    setEditPatientData({
+                      ...editPatientData,
+                      whatsapp: value ? "+" + value : "",
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="edit-patient-birth">Data de Nascimento</Label>
                 <Input
                   id="edit-patient-birth"
@@ -4129,6 +4208,7 @@ const ChiefSpecialistDashboard = () => {
                     name: "",
                     email: "",
                     phone: "",
+                    whatsapp: "",
                     dateOfBirth: "",
                     gender: "",
                     assignedSpecialist: "",
@@ -4140,8 +4220,47 @@ const ChiefSpecialistDashboard = () => {
               <Button
                 onClick={async () => {
                   try {
-                    if (!editPatientData.name || !editPatientData.email) {
-                      alert("Nome e email são obrigatórios.");
+                    if (
+                      !editPatientData.name ||
+                      !editPatientData.email ||
+                      !editPatientData.whatsapp
+                    ) {
+                      alert("Nome, email e WhatsApp são obrigatórios.");
+                      return;
+                    }
+
+                    // Validate WhatsApp format
+                    const whatsappRegex = /^\+55\d{2}9\d{8}$/;
+                    if (!whatsappRegex.test(editPatientData.whatsapp)) {
+                      alert(
+                        "Formato de WhatsApp inválido. Use +55DDNNNNNNNNN (ex: +5511999999999)",
+                      );
+                      return;
+                    }
+
+                    // Check if WhatsApp number is already in use by another patient
+                    const {
+                      data: existingWhatsApp,
+                      error: whatsappCheckError,
+                    } = await supabase
+                      .from("patients")
+                      .select("id")
+                      .eq("whatsapp_number", editPatientData.whatsapp)
+                      .neq("id", selectedPatient.id)
+                      .single();
+
+                    if (
+                      whatsappCheckError &&
+                      whatsappCheckError.code !== "PGRST116"
+                    ) {
+                      alert("Erro ao verificar número WhatsApp");
+                      return;
+                    }
+
+                    if (existingWhatsApp) {
+                      alert(
+                        "Este número WhatsApp já está cadastrado para outro paciente",
+                      );
                       return;
                     }
 
@@ -4171,6 +4290,7 @@ const ChiefSpecialistDashboard = () => {
                       .update({
                         date_of_birth: editPatientData.dateOfBirth || null,
                         gender: editPatientData.gender || null,
+                        whatsapp_number: editPatientData.whatsapp,
                         assigned_specialist:
                           editPatientData.assignedSpecialist || null,
                         updated_at: new Date().toISOString(),
@@ -4190,6 +4310,7 @@ const ChiefSpecialistDashboard = () => {
                       name: "",
                       email: "",
                       phone: "",
+                      whatsapp: "",
                       dateOfBirth: "",
                       gender: "",
                       assignedSpecialist: "",

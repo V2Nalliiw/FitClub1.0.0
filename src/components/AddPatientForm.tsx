@@ -3,17 +3,38 @@ import { supabase } from "@/lib/supabase";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
 
 const patientFormSchema = z.object({
   name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
+  password: z
+    .string()
+    .min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
   phone: z.string().optional(),
+  whatsapp: z
+    .string()
+    .min(1, { message: "WhatsApp é obrigatório" })
+    .regex(/^\+55\d{2}9\d{8}$/, {
+      message: "Formato inválido. Use +55DDNNNNNNNNN (ex: +5511999999999)",
+    }),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   assignedSpecialist: z.string().optional(),
@@ -40,6 +61,7 @@ export const AddPatientForm = ({
       email: "",
       password: "",
       phone: "",
+      whatsapp: "",
       dateOfBirth: "",
       gender: "",
       assignedSpecialist: "",
@@ -51,7 +73,30 @@ export const AddPatientForm = ({
       setIsSubmitting(true);
       setError(null);
 
-      // 1. Crie o usuário no Supabase Auth
+      // 1. Verificar se o número WhatsApp já existe
+      const { data: existingWhatsApp, error: whatsappCheckError } =
+        await supabase
+          .from("patients")
+          .select("id")
+          .eq("whatsapp_number", data.whatsapp)
+          .limit(1);
+
+      if (whatsappCheckError) {
+        console.error("WhatsApp check error:", whatsappCheckError);
+        setError(
+          `Erro ao verificar número WhatsApp: ${whatsappCheckError.message}`,
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (existingWhatsApp && existingWhatsApp.length > 0) {
+        setError("Este número WhatsApp já está cadastrado");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 2. Crie o usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -68,7 +113,7 @@ export const AddPatientForm = ({
         return;
       }
 
-      // 2. Crie o perfil em user_profiles
+      // 3. Crie o perfil em user_profiles
       const { error: profileError } = await supabase
         .from("user_profiles")
         .insert({
@@ -86,13 +131,14 @@ export const AddPatientForm = ({
         return;
       }
 
-      // 3. Crie o registro em patients
+      // 4. Crie o registro em patients
       const { error: patientError } = await supabase.from("patients").insert({
         user_id: authData.user.id,
         clinic_id: clinicId,
         date_of_birth: data.dateOfBirth || null,
         gender: data.gender || null,
-        // assigned_specialist pode ser omitido se não for obrigatório
+        whatsapp_number: data.whatsapp,
+        assigned_specialist: data.assignedSpecialist || null,
       });
       if (patientError) {
         setError(patientError.message || "Erro ao criar paciente");
@@ -103,7 +149,9 @@ export const AddPatientForm = ({
       alert(`Paciente ${data.name} adicionado com sucesso!`);
       onClose();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Erro ao adicionar paciente");
+      setError(
+        error instanceof Error ? error.message : "Erro ao adicionar paciente",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -177,6 +225,36 @@ export const AddPatientForm = ({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="whatsapp"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>WhatsApp *</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="+5511999999999"
+                  {...field}
+                  onChange={(e) => {
+                    // Auto-format WhatsApp number
+                    let value = e.target.value.replace(/\D/g, "");
+                    if (value.length > 0 && !value.startsWith("55")) {
+                      if (value.length >= 11) {
+                        value = "55" + value;
+                      }
+                    }
+                    if (value.length > 13) {
+                      value = value.slice(0, 13);
+                    }
+                    field.onChange(value ? "+" + value : "");
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -259,4 +337,4 @@ export const AddPatientForm = ({
       </form>
     </Form>
   );
-}; 
+};
