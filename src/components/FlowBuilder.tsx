@@ -3342,6 +3342,8 @@ const ChartNode = ({ data, id, selected }) => {
 const WhatsAppNotificationNode = ({ data, id, selected }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showConnectionPoints, setShowConnectionPoints] = useState(false);
+  const [sendingStatus, setSendingStatus] = useState("idle"); // idle, sending, success, error
+  const [errorMessage, setErrorMessage] = useState("");
 
   const updateNodeData = (newData) => {
     if (window.updateNodeData) {
@@ -3380,6 +3382,86 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
       ...data,
       [field]: value,
     });
+  };
+
+  // Function to send WhatsApp notification
+  const sendWhatsAppNotification = async (patientData) => {
+    try {
+      setSendingStatus("sending");
+      setErrorMessage("");
+
+      // Get the phone number from patient data or use test phone if available
+      const phoneField = data.phoneField || "phone";
+      const phoneNumber =
+        data.testPhone || (patientData && patientData[phoneField]);
+
+      if (!phoneNumber) {
+        throw new Error("Número de telefone não disponível");
+      }
+
+      // Prepare the payload for the Edge Function
+      const payload = {
+        patient_id: patientData.id,
+        message:
+          data.message || "Olá! Esta é uma mensagem do seu especialista.",
+        mediaUrls: data.mediaUrls || [],
+      };
+
+      // Call the Supabase Edge Function to send the WhatsApp message
+      const { data: responseData, error } = await supabase.functions.invoke(
+        "supabase-functions-send_whatsapp_notification",
+        {
+          body: payload,
+        },
+      );
+
+      if (error) {
+        console.error("Erro ao enviar notificação WhatsApp:", error);
+        setSendingStatus("error");
+        setErrorMessage(error.message || "Erro ao enviar mensagem");
+        return false;
+      }
+
+      console.log("Notificação WhatsApp enviada com sucesso:", responseData);
+      setSendingStatus("success");
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setSendingStatus("idle");
+      }, 3000);
+
+      return true;
+    } catch (error) {
+      console.error("Exceção ao enviar notificação WhatsApp:", error);
+      setSendingStatus("error");
+      setErrorMessage(error.message || "Erro ao enviar mensagem");
+
+      // Reset error status after 5 seconds
+      setTimeout(() => {
+        setSendingStatus("idle");
+        setErrorMessage("");
+      }, 5000);
+
+      return false;
+    }
+  };
+
+  // Function to test WhatsApp notification
+  const testWhatsAppNotification = async () => {
+    const testPhone = data.testPhone;
+    if (!testPhone) {
+      alert(
+        "Por favor, configure um número de telefone de teste no modal de edição.",
+      );
+      return;
+    }
+
+    const mockPatientData = {
+      id: "test-patient-id",
+      [data.phoneField || "phone"]: testPhone,
+    };
+
+    await sendWhatsAppNotification(mockPatientData);
   };
 
   return (
@@ -3452,6 +3534,63 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
               Campo de telefone: {data.phoneField}
             </div>
           )}
+          {Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0 && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <Image className="h-3 w-3 mr-1" />
+              {data.mediaUrls.length}{" "}
+              {data.mediaUrls.length === 1
+                ? "mídia anexada"
+                : "mídias anexadas"}
+            </div>
+          )}
+
+          {/* Status indicator */}
+          {sendingStatus !== "idle" && (
+            <div
+              className={`flex items-center text-xs mt-2 ${
+                sendingStatus === "sending"
+                  ? "text-amber-500"
+                  : sendingStatus === "success"
+                    ? "text-green-500"
+                    : "text-red-500"
+              }`}
+            >
+              {sendingStatus === "sending" && (
+                <>
+                  <div className="animate-spin h-3 w-3 border-2 border-amber-500 border-t-transparent rounded-full mr-1"></div>
+                  Enviando mensagem...
+                </>
+              )}
+              {sendingStatus === "success" && (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Mensagem enviada com sucesso!
+                </>
+              )}
+              {sendingStatus === "error" && (
+                <>
+                  <X className="h-3 w-3 mr-1" />
+                  Erro: {errorMessage || "Falha ao enviar mensagem"}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Test button */}
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                testWhatsAppNotification();
+              }}
+              disabled={sendingStatus === "sending"}
+            >
+              Testar Envio
+            </Button>
+          </div>
         </div>
 
         {/* Connection button */}
@@ -3524,7 +3663,36 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`whatsapp-media-${id}`}>Anexar Mídia (imagem, vídeo ou PDF)</Label>
+              <Label htmlFor={`whatsapp-phone-field-${id}`}>
+                Campo de Telefone
+              </Label>
+              <Input
+                id={`whatsapp-phone-field-${id}`}
+                defaultValue={data.phoneField || "phone"}
+                placeholder="Nome do campo de telefone no cadastro do paciente"
+                onChange={(e) =>
+                  handleInputChange("phoneField", e.target.value)
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-test-phone-${id}`}>
+                Telefone para Teste (E.164)
+              </Label>
+              <Input
+                id={`whatsapp-test-phone-${id}`}
+                defaultValue={data.testPhone || ""}
+                placeholder="Ex: +5511999999999"
+                onChange={(e) => handleInputChange("testPhone", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Formato E.164 (com código do país). Ex: +5511999999999
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`whatsapp-media-${id}`}>
+                Anexar Mídia (imagem, vídeo ou PDF)
+              </Label>
               <Input
                 id={`whatsapp-media-${id}`}
                 type="file"
@@ -3542,14 +3710,20 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
               {Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {data.mediaUrls.map((url, idx) => (
-                    <div key={idx} className="text-xs text-green-700 dark:text-green-300 underline break-all">
-                      <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                    <div
+                      key={idx}
+                      className="text-xs text-green-700 dark:text-green-300 underline break-all"
+                    >
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {url}
+                      </a>
                     </div>
                   ))}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Você pode anexar imagens, vídeos ou PDFs. Os arquivos serão enviados ao salvar.
+                Você pode anexar imagens, vídeos ou PDFs. Os arquivos serão
+                enviados ao salvar.
               </p>
             </div>
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -3558,10 +3732,22 @@ const WhatsAppNotificationNode = ({ data, id, selected }) => {
                 <div className="text-xs text-amber-700 dark:text-amber-300">
                   <p className="font-medium mb-1">Informações importantes:</p>
                   <ul className="space-y-1 text-xs">
-                    <li>• O número de telefone do paciente será buscado automaticamente do cadastro.</li>
-                    <li>• A mensagem será enviada via WhatsApp usando a Edge Function do Supabase.</li>
-                    <li>• O envio só ocorre quando o paciente atinge este nó durante a execução do fluxo.</li>
-                    <li>• Certifique-se de que o paciente tem um número de WhatsApp válido cadastrado.</li>
+                    <li>
+                      • O número de telefone do paciente será buscado
+                      automaticamente do cadastro.
+                    </li>
+                    <li>
+                      • A mensagem será enviada via WhatsApp usando a Edge
+                      Function do Supabase.
+                    </li>
+                    <li>
+                      • O envio só ocorre quando o paciente atinge este nó
+                      durante a execução do fluxo.
+                    </li>
+                    <li>
+                      • Certifique-se de que o paciente tem um número de
+                      WhatsApp válido cadastrado.
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -3708,16 +3894,19 @@ export const FlowBuilder = () => {
         return false;
       }
 
+      // Prepare the payload for the Edge Function
+      const payload = {
+        patient_id: patientData.id,
+        message:
+          nodeData.message || "Olá! Esta é uma mensagem do seu especialista.",
+        mediaUrls: nodeData.mediaUrls || [],
+      };
+
       // Call the Supabase Edge Function to send the WhatsApp message
       const { data, error } = await supabase.functions.invoke(
-        "send-whatsapp-notification",
+        "supabase-functions-send_whatsapp_notification",
         {
-          body: {
-            to: phoneNumber,
-            message:
-              nodeData.message ||
-              "Olá! Esta é uma mensagem do seu especialista.",
-          },
+          body: payload,
         },
       );
 
@@ -3921,6 +4110,7 @@ export const FlowBuilder = () => {
     // For testing WhatsApp node in design mode
     if (node.type === "whatsAppNode" && event.altKey) {
       const mockPatientData = {
+        id: "test-patient-id",
         phone: prompt(
           "Enter a phone number for testing (E.164 format, e.g. +5511999999999):",
           "+5511999999999",
@@ -5754,7 +5944,17 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
       // In a real implementation, this would use actual patient data
       // For the preview, we'll just simulate the execution
       console.log("Simulating WhatsApp notification in preview mode");
-      // In real execution mode, this would call executeWhatsAppNotification(currentNode.data, patientData)
+
+      // In real execution mode, this would call executeWhatsAppNotification
+      // Get the node component instance to update its state
+      const nodeInstance = document.querySelector(
+        `[data-id="${currentNode.id}"]`,
+      );
+      if (nodeInstance && nodeInstance.__reactFiber$) {
+        // This is a simplified approach - in a real implementation, you would
+        // use a proper state management solution or refs to access the component
+        console.log("Would send WhatsApp notification to patient");
+      }
     }
 
     // Determine next node based on current node type and user choices
@@ -6813,8 +7013,10 @@ const PatientPreview = ({ nodes, edges, currentStep, onStepChange }) => {
                         const angle =
                           (Math.PI * 2 * index) / categories.length -
                           Math.PI / 2;
-                        const x = centerX + (radarRadius + 10) * Math.cos(angle);
-                        const y = centerY + (radarRadius + 10) * Math.sin(angle);
+                        const x =
+                          centerX + (radarRadius + 10) * Math.cos(angle);
+                        const y =
+                          centerY + (radarRadius + 10) * Math.sin(angle);
                         return (
                           <text
                             key={index}

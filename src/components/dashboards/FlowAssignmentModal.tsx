@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Calendar, Clock, Repeat } from "lucide-react";
+import { Users, Calendar, Clock, Repeat, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Patient {
+  id: string;
+  user_id: string;
+  user_profiles: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
 
 interface FlowAssignmentModalProps {
   isOpen: boolean;
@@ -31,19 +43,40 @@ export const FlowAssignmentModal: React.FC<FlowAssignmentModalProps> = ({
   onClose,
   flowName,
 }) => {
+  const { user } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [frequency, setFrequency] = useState("daily");
   const [repetitions, setRepetitions] = useState("7");
 
-  const mockPatients = [
-    { id: "1", name: "Maria Silva", email: "maria@email.com" },
-    { id: "2", name: "João Santos", email: "joao@email.com" },
-    { id: "3", name: "Ana Costa", email: "ana@email.com" },
-    { id: "4", name: "Pedro Oliveira", email: "pedro@email.com" },
-    { id: "5", name: "Carla Mendes", email: "carla@email.com" },
-  ];
+  useEffect(() => {
+    if (isOpen && user?.clinicId) {
+      fetchPatients();
+    }
+  }, [isOpen, user?.clinicId]);
+
+  const fetchPatients = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("patients")
+        .select(`id, user_id, user_profiles:user_id(id, name, email)`)
+        .eq("clinic_id", user?.clinicId);
+
+      if (error) throw error;
+      setPatients(data || []);
+    } catch (err) {
+      console.error("Erro ao buscar pacientes:", err);
+      setError("Falha ao carregar a lista de pacientes.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePatientToggle = (patientId: string) => {
     setSelectedPatients((prev) =>
@@ -51,6 +84,14 @@ export const FlowAssignmentModal: React.FC<FlowAssignmentModalProps> = ({
         ? prev.filter((id) => id !== patientId)
         : [...prev, patientId],
     );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPatients.length === patients.length) {
+      setSelectedPatients([]);
+    } else {
+      setSelectedPatients(patients.map((p) => p.user_profiles.id));
+    }
   };
 
   const handleAssignFlow = () => {
@@ -108,32 +149,64 @@ export const FlowAssignmentModal: React.FC<FlowAssignmentModalProps> = ({
         <div className="space-y-6 py-4">
           {/* Patient Selection */}
           <div className="space-y-3">
-            <Label className="text-base font-medium">
-              Selecionar Pacientes
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">
+                Selecionar Pacientes
+              </Label>
+              {patients.length > 0 && (
+                <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                  {selectedPatients.length === patients.length
+                    ? "Desmarcar Todos"
+                    : "Selecionar Todos"}
+                </Button>
+              )}
+            </div>
+
             <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
-              <div className="space-y-3">
-                {mockPatients.map((patient) => (
-                  <div key={patient.id} className="flex items-center space-x-3">
-                    <Checkbox
-                      id={`patient-${patient.id}`}
-                      checked={selectedPatients.includes(patient.id)}
-                      onCheckedChange={() => handlePatientToggle(patient.id)}
-                    />
-                    <div className="flex-1">
-                      <Label
-                        htmlFor={`patient-${patient.id}`}
-                        className="font-medium cursor-pointer"
-                      >
-                        {patient.name}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {patient.email}
-                      </p>
+              {loading ? (
+                <div className="flex items-center justify-center h-24">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">
+                    Carregando pacientes...
+                  </span>
+                </div>
+              ) : error ? (
+                <div className="text-center text-red-500 py-4">{error}</div>
+              ) : patients.length === 0 ? (
+                <div className="text-center text-muted-foreground py-4">
+                  Nenhum paciente encontrado para esta clínica.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {patients.map((patient) => (
+                    <div
+                      key={patient.id}
+                      className="flex items-center space-x-3"
+                    >
+                      <Checkbox
+                        id={`patient-${patient.user_profiles.id}`}
+                        checked={selectedPatients.includes(
+                          patient.user_profiles.id,
+                        )}
+                        onCheckedChange={() =>
+                          handlePatientToggle(patient.user_profiles.id)
+                        }
+                      />
+                      <div className="flex-1">
+                        <Label
+                          htmlFor={`patient-${patient.user_profiles.id}`}
+                          className="font-medium cursor-pointer"
+                        >
+                          {patient.user_profiles.name}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {patient.user_profiles.email}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {selectedPatients.length} paciente(s) selecionado(s)
@@ -245,7 +318,7 @@ export const FlowAssignmentModal: React.FC<FlowAssignmentModalProps> = ({
           </DialogClose>
           <Button
             onClick={handleAssignFlow}
-            disabled={selectedPatients.length === 0 || !startDate}
+            disabled={selectedPatients.length === 0 || !startDate || loading}
           >
             Atribuir Fluxo
           </Button>

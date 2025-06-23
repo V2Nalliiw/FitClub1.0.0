@@ -798,6 +798,50 @@ export type Database = {
           },
         ]
       }
+      whatsapp_logs: {
+        Row: {
+          created_at: string | null
+          error: string | null
+          id: string
+          media_urls: string[] | null
+          message: string
+          patient_id: string | null
+          sent_at: string
+          status: string
+          twilio_message_sid: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          media_urls?: string[] | null
+          message: string
+          patient_id?: string | null
+          sent_at: string
+          status: string
+          twilio_message_sid?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          media_urls?: string[] | null
+          message?: string
+          patient_id?: string | null
+          sent_at?: string
+          status?: string
+          twilio_message_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
